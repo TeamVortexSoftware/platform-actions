@@ -1,0 +1,39 @@
+# The default repo profile — the baseline any repository on the platform adheres to.
+# Deployed as .vortex.d/skel.yml by `vortex repo profile apply`. Never hand-edited:
+# this file is `enforce` policy, so the CLI's copy is authoritative and a repo's
+# deployed copy is refreshed from it on every apply.
+#
+# This file carries POLICY and STRUCTURED METADATA only. The human description of each
+# target is the placeholder body in this profile's package.json — one source of truth,
+# which `vortex markdown` renders into the docs.
+
+profile: default
+title: Default repo profile
+summary: Baseline vortex:* targets and version-free config for any repo on the platform.
+# extends: <profile>      # profile inheritance — reserved, unused in v1
+
+files:
+  package.json:
+    merge: json # deep-merge into the repo's existing package.json
+    policy: require # default policy for every path this profile contributes
+    overrides: {} # JSON Pointer → policy, e.g. "/packageManager": enforce
+  .npmrc:
+    merge: verbatim
+    policy: seed
+  .nvmrc:
+    merge: verbatim
+    policy: seed # contains `24` — the one pinned value the profile carries
+  .vortex.d/skel.yml:
+    merge: verbatim
+    policy: enforce # a materialized snapshot of the CLI's copy; never hand-edited
+
+# `concern` is the middle segment of the target name. `:all` is the contract —
+# shared workflows call only vortex:<concern>:all; anything else is a repo-local leaf.
+# `mutates` says whether running the target may change committed files, which is what
+# decides if CI gates it with a dirty-tree check.
+targets:
+  vortex:build:all: { concern: build, mutates: true }
+  vortex:test:all: { concern: test, mutates: false }
+  vortex:lint:all: { concern: lint, mutates: false }
+  vortex:lint:fix: { concern: lint, mutates: true }
+  vortex:generate:all: { concern: generate, mutates: true }

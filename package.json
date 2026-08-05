@@ -1,0 +1,23 @@
+{
+  "name": "platform-actions",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:teamvortexsoftware/platform-actions"
+  },
+  "scripts": {
+    "preinstall": "npx only-allow pnpm",
+    "vortex:build:all": "echo 'produce every deployable/publishable artifact'",
+    "vortex:test:all": "echo 'run the complete test battery'",
+    "vortex:lint:all": "echo 'read-only correctness/style/policy checks'",
+    "vortex:lint:fix": "echo 'apply the fixes vortex:lint:all reports'",
+    "vortex:generate:all": "echo 'regenerate every committed generated file'"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "packageManager": "pnpm@11.5.0",
+  "dependencies": {
+    "@teamvortexsoftware/config-utility": "^1.13.0"
+  }
+}
