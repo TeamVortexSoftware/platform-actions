@@ -1,0 +1,148 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+# Standard pull-request verification for any repo on the platform.
+#
+# A consuming repo calls this from a six-line stub in its own
+# .github/workflows/verify.yml; all the logic lives here, so changing what
+# verification means touches this file and no consuming repo. The stub to paste,
+# and what each target has to satisfy, are in:
+#   platform-repos/docs/how-tos/standard-repo-workflows.md
+#
+# What it runs, and why in this order:
+#   1. vortex:lint:all      read-only
+#   2. vortex:test:all      read-only
+#   3. vortex:generate:all  mutates, then the tree must be clean
+#   4. vortex:build:all     opt-in, and deliberately AFTER the drift check
+#
+# Every target is invoked with `pnpm run --if-present`, which exits 0 when the
+# script is undefined — so the whole set can be called unconditionally and a repo
+# that implements only part of it still passes.
+#
+# Build runs last on purpose. `generate` produces files that are committed and
+# `build` produces artifacts that are not, so only `generate` can be gated on a
+# clean tree. Running build first would make a repo whose dist/ isn't ignored
+# fail the drift check with a message about the wrong problem.
+#
+# No AWS credentials are configured here, by design. If a repo's target needs the
+# vault, that is for the repo to solve inside its own target — a shared workflow
+# every repo calls is the wrong place to hold a role.
+
+name: repo-verify
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: "Node version. Defaults to the repo's .nvmrc."
+        type: string
+        required: false
+      submodules:
+        description: "Passed to actions/checkout: 'recursive', 'true' or 'false'."
+        type: string
+        required: false
+        default: "recursive"
+      skip-generate-check:
+        description: >-
+          Skip vortex:generate:all and the clean-tree check. For a repo adopting
+          the workflow before its generators are honest — not a permanent state.
+        type: boolean
+        required: false
+        default: false
+      run-build:
+        description: >-
+          Also run vortex:build:all. Opt-in: worth it where a PR should prove the
+          artifact still builds, noise where nothing is built.
+        type: boolean
+        required: false
+        default: false
+    secrets:
+      ssh-key:
+        description: >-
+          Deploy/SSH key with read access to any private submodules. Required
+          only when the repo has submodules — .gitmodules on this platform uses
+          SSH URLs, which the default token cannot satisfy.
+        required: false
+      npm-token:
+        description: >-
+          npm token with read access to the @teamvortexsoftware scope. Required
+          only when the repo installs a package from it.
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    # Job-level env, because the `secrets` context is not available in a step's
+    # `if:` — `env` is. This is what lets npm auth be genuinely optional.
+    env:
+      NPM_TOKEN: ${{ secrets.npm-token }}
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: ${{ inputs.submodules }}
+          ssh-key: ${{ secrets.ssh-key }}
+
+      - name: Setup pnpm
+        # Before setup-node, which needs pnpm on PATH to resolve its cache.
+        # Version comes from the repo's own package.json "packageManager".
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          run_install: false
+
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          # When node-version is empty, setup-node falls back to the file. The
+          # default profile requires .nvmrc, so the fallback always has a target.
+          node-version: ${{ inputs.node-version }}
+          node-version-file: ".nvmrc"
+          cache: pnpm
+
+      - name: Configure npm auth
+        # User-level, never the repo's committed .npmrc: pnpm refuses to expand
+        # ${NPM_TOKEN} from a project .npmrc, and every repo's .npmrc says so.
+        # The token is read from env rather than interpolated into the script.
+        if: ${{ env.NPM_TOKEN != '' }}
+        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: vortex:lint:all
+        run: pnpm run --if-present vortex:lint:all
+
+      - name: vortex:test:all
+        run: pnpm run --if-present vortex:test:all
+
+      - name: vortex:generate:all
+        if: ${{ !inputs.skip-generate-check }}
+        run: pnpm run --if-present vortex:generate:all
+
+      - name: Generated files are current
+        # Staging first so a *new* generated file counts as drift; `git diff`
+        # alone ignores untracked paths, which is exactly how a newly generated
+        # file would slip through.
+        if: ${{ !inputs.skip-generate-check }}
+        run: |
+          git add -A
+          if ! git diff --cached --quiet; then
+            echo "::error::vortex:generate:all changed files — a source was edited without regenerating. Run it locally and commit the result."
+            git diff --cached --stat
+            echo "---"
+            git diff --cached
+            exit 1
+          fi
+          echo "Tree is clean after vortex:generate:all."
+
+      - name: vortex:build:all
+        if: ${{ inputs.run-build }}
+        run: pnpm run --if-present vortex:build:all

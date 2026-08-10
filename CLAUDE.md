@@ -1,0 +1,65 @@
+# CLAUDE.md
+
+Guidance for Claude Code working in **platform-actions**.
+
+## This repository is PUBLIC
+
+**Everything committed here is world-readable.** Treat every file as published
+the moment it lands on `main`.
+
+That is deliberate, not an oversight: a reusable workflow in a *private* repo can
+only be called from repos in the same GitHub organization, and this platform
+spans two (`TeamVortexSoftware` and `vortex-production`). GitHub's repo-level
+Actions `access_level` is `none` / `organization` / `enterprise` with no
+per-organization allowlist, and `enterprise` needs both orgs under one GitHub
+Enterprise account — which the `team` plan does not provide. Public is what makes
+one shared workflow serve both orgs.
+
+**What that means in practice.** Secret *values* never belong in a workflow file
+anywhere, so that part is unchanged. What changes is that **structure is
+published too**: domain names, secret paths, AWS account aliases, role names,
+bucket names, internal hostnames. Those are the things that get typed into a
+workflow without a second thought, and here they are visible to anyone.
+
+This matters most for the **scheduled automation** this repo is slated to host —
+Let's Encrypt certificate issuance and renewal, and similar. That kind of
+workflow names domains and secret paths as a matter of course.
+
+Before committing, ask what a reader outside the company learns from the file. If
+the answer includes anything about how our infrastructure is laid out, pass it in
+as an input or a secret from the calling repo instead of writing it here.
+
+## What lives here
+
+- **Reusable workflows** (`.github/workflows/*.yml` with `on: workflow_call`) —
+  called by workflows in the platform repos and the service repos.
+- **Composite actions** — the same idea at step granularity.
+- **Scheduled automation** — workflows on a `schedule:` trigger that run *here*
+  rather than in a service repo, because they belong to the platform rather than
+  to any one service.
+
+Nothing here is built, published, or deployed on its own. It is consumed by
+reference (`uses:`), so a change to a workflow on `main` reaches every consumer
+that tracks `@main` on its next run — there is no release step between the two.
+That is the trade for keeping the logic in one place: **a broken workflow on
+`main` breaks every consuming repo's PRs at once.**
+
+## The `vortex:*` targets
+
+`repo-verify.yml` runs a repo's `vortex:<concern>:all` scripts. The namespace,
+what each concern means, and which of them mutate are defined in
+`platform-repos/docs/script-targets.md`. The caller stub and adoption steps are
+in `platform-repos/docs/how-tos/standard-repo-workflows.md`.
+
+Do not encode a repo's specifics in a shared workflow — that is what the targets
+exist to avoid. If a workflow needs to know something repo-shaped, it becomes an
+input.
+
+## Repo conventions
+
+- Part of the [platform-repos](https://github.com/TeamVortexSoftware/platform-repos)
+  umbrella, as a git submodule. Cross-repo work starts there.
+- Base branches are read-only: push a `feature/*` branch and open a PR; JJ merges.
+- Pin third-party actions by commit SHA with a version comment, as
+  `repo-verify.yml` does for `pnpm/action-setup`. First-party `actions/*` are
+  pinned by major tag.
