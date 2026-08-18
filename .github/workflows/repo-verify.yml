@@ -6,7 +6,7 @@
 # .github/workflows/verify.yml; all the logic lives here, so changing what
 # verification means touches this file and no consuming repo. The stub to paste,
 # and what each target has to satisfy, are in:
-#   platform-repos/docs/how-tos/standard-repo-workflows.md
+#   platform-actions/docs/standard-repo-workflows.md
 #
 # What it runs, and why in this order:
 #   1. vortex:lint:all      read-only

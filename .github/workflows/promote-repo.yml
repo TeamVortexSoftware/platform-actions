@@ -9,7 +9,7 @@
 #
 # A consuming repo calls this from a short stub in the PRODUCTION copy of the
 # repo. The stub to paste, and the variables it depends on, are in:
-#   platform-repos/docs/how-tos/standard-repo-workflows.md
+#   platform-actions/docs/promoting-to-production.md
 #
 # WHY THE ORG AND REPO NAMES ARE INPUTS. This repository is PUBLIC — that is
 # deliberate, because a reusable workflow in a private repo can only be called
