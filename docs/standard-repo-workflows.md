@@ -26,7 +26,7 @@ repo's PR  →  .github/workflows/verify.yml   (the stub, in your repo)
               vortex:lint:all · vortex:test:all · vortex:generate:all
 ```
 
-The split is the point. When what verification *means* changes, the reusable
+The split is the point. When what verification _means_ changes, the reusable
 workflow changes and **no consuming repo is touched**.
 
 The reusable workflow checks the repo out (submodules included, recursively),
@@ -46,11 +46,11 @@ Create `.github/workflows/verify.yml` in your repo:
 name: verify
 
 on:
-  pull_request:
+    pull_request:
 
 jobs:
-  verify:
-    uses: TeamVortexSoftware/platform-actions/.github/workflows/repo-verify.yml@main
+    verify:
+        uses: TeamVortexSoftware/platform-actions/.github/workflows/repo-verify.yml@main
 ```
 
 Keep the two comment lines. They cost nothing and they are how a file is
@@ -72,19 +72,19 @@ The targets themselves are defined in
 [script-targets.md](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/script-targets.md). What this workflow additionally
 requires of them:
 
-| Target | Requirement |
-| --- | --- |
-| `vortex:lint:all` | Read-only. Must not modify the tree. |
-| `vortex:test:all` | Read-only, and **must run without credentials** (see below). |
-| `vortex:generate:all` | Mutates by design; the tree must be clean afterwards. |
-| `vortex:build:all` | Opt-in, and never part of the clean-tree check. |
+| Target                | Requirement                                                  |
+| --------------------- | ------------------------------------------------------------ |
+| `vortex:lint:all`     | Read-only. Must not modify the tree.                         |
+| `vortex:test:all`     | Read-only, and **must run without credentials** (see below). |
+| `vortex:generate:all` | Mutates by design; the tree must be clean afterwards.        |
+| `vortex:build:all`    | Opt-in, and never part of the clean-tree check.              |
 
 **The clean-tree check is the sharp edge.** After `vortex:generate:all`, the
 workflow stages everything and fails if anything changed — a new generated file
 counts, not just a modified one. A failure means somebody edited a source and
 didn't regenerate; the fix is to run the target locally and commit the result.
 
-`vortex:build:all` runs *after* that check, and only when you ask for it. Build
+`vortex:build:all` runs _after_ that check, and only when you ask for it. Build
 output isn't committed, so a dirty tree after building means `dist/` isn't
 ignored — a different bug, and one you don't want reported as a drift failure.
 
@@ -104,35 +104,35 @@ keeping the vault-backed run in a separate workflow that does configure a role.
 
 All optional.
 
-| Input | Default | Use it when |
-| --- | --- | --- |
-| `node-version` | `.nvmrc` | You need to override the repo's pinned version. |
-| `submodules` | `recursive` | Set `false` in a repo with no submodules to save a step. |
-| `skip-generate-check` | `false` | Adopting before your generators are honest. Temporary. |
-| `run-build` | `false` | A PR should prove the artifact still builds. |
+| Input                 | Default     | Use it when                                              |
+| --------------------- | ----------- | -------------------------------------------------------- |
+| `node-version`        | `.nvmrc`    | You need to override the repo's pinned version.          |
+| `submodules`          | `recursive` | Set `false` in a repo with no submodules to save a step. |
+| `skip-generate-check` | `false`     | Adopting before your generators are honest. Temporary.   |
+| `run-build`           | `false`     | A PR should prove the artifact still builds.             |
 
-| Secret | Required when |
-| --- | --- |
-| `ssh-key` | The repo has submodules. `.gitmodules` uses SSH URLs here, which the default workflow token cannot satisfy — without a key, checkout silently produces an empty submodule directory. |
-| `npm-token` | The repo installs a package from the `@teamvortexsoftware` scope. Written to the runner's user-level `~/.npmrc`, never the repo's committed one. |
+| Secret      | Required when                                                                                                                                                                        |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ssh-key`   | The repo has submodules. `.gitmodules` uses SSH URLs here, which the default workflow token cannot satisfy — without a key, checkout silently produces an empty submodule directory. |
+| `npm-token` | The repo installs a package from the `@teamvortexsoftware` scope. Written to the runner's user-level `~/.npmrc`, never the repo's committed one.                                     |
 
 Passing them looks like this:
 
 ```yaml
 jobs:
-  verify:
-    uses: TeamVortexSoftware/platform-actions/.github/workflows/repo-verify.yml@main
-    with:
-      run-build: true
-    secrets:
-      ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
-      npm-token: ${{ secrets.NPM_TOKEN }}
+    verify:
+        uses: TeamVortexSoftware/platform-actions/.github/workflows/repo-verify.yml@main
+        with:
+            run-build: true
+        secrets:
+            ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
+            npm-token: ${{ secrets.NPM_TOKEN }}
 ```
 
 ## Adopting it in a repo
 
-1. **Install the profile** if the repo doesn't have one — `vortex repo profile
-   apply` gives it `package.json`, `.nvmrc`, `.npmrc` and the `vortex:*`
+1. **Install the profile** if the repo doesn't have one — `vortex repo profile apply`
+   gives it `package.json`, `.nvmrc`, `.npmrc` and the `vortex:*`
    placeholders. See [script-targets.md](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/script-targets.md).
 2. **Plumb the targets you actually have.** A placeholder is a free pass, so
    plumbing is what makes verification mean anything. Start with
@@ -147,8 +147,3 @@ jobs:
 
 - The reusable workflow: `platform-actions/.github/workflows/repo-verify.yml`
 - The target definitions: [script-targets.md](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/script-targets.md)
-- Two-org promotion, the other shared workflow:
-  [promoting-to-production.md](promoting-to-production.md)
-- `platform-actions` is a **public** repo, which is what lets one workflow serve
-  both GitHub organizations. Anything committed there is world-readable — see
-  that repo's `CLAUDE.md` before adding to it.

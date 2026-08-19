@@ -40,7 +40,7 @@ production repo triggers deployments.
 
 ## Installing it
 
-Copy [the stub](../workflow-stubs/promote-repo.yml) into the service repo as
+Copy [the promote-repo.yml stub](../workflow-stubs/promote-repo.yml) into the service repo as
 `.github/workflows/vtx-promote-repo.yml`. Nothing to fill in — every value
 resolves from an organization-level Actions variable or from the event. Keep the
 stub portion intact; the `name` is yours to change.
@@ -59,7 +59,7 @@ timestamp.
 | `prod-repo` | _required_ | Name of the production repository. |
 | `source-branch` | `develop` | Branch being promoted. |
 | `target-branch` | `main` | Branch promoted onto, in BOTH repositories. Pushing it to the production repository is what triggers the production deploys. |
-| `lfs` | `false` | Mirror Git LFS objects to the production repository. Leave false unless the repo actually vendors binaries through LFS. |
+| `lfs` | `false` | Mirror Git LFS objects to the production repository. Leave false unless the repo actually stores binaries through LFS. |
 | `deployment-log-path` | `REPO_DEPLOYMENT_LOG.md` | Markdown log appended with one row per promotion, committed to the source branch before promoting. Set to an empty string to skip the commit. |
 | `deployment-log-description` | `""` | Optional note for the log row and commit message. Blank becomes "production deployment at <time> UTC". |
 | `commit-author` | `""` | Author of the deployment-log commit, as "Name <email>". Must be an identity the production deploy platform accepts — Vercel refuses a build whose commit author is not on its team. |
@@ -87,5 +87,3 @@ timestamp.
 
 - The reusable workflow: `platform-actions/.github/workflows/promote-repo.yml`
 - The stub to install: `platform-actions/workflow-stubs/promote-repo.yml`
-- PR verification, the other shared workflow:
-  [standard-repo-workflows.md](standard-repo-workflows.md)
