@@ -36,17 +36,21 @@
 #   * THE SOURCE BRANCH IS NEVER FORCE-PUSHED. If it moved mid-run the push is
 #     rejected, which is the correct loud failure. Re-dispatch.
 #
-# Two features are OPT-IN because they exist for one consumer's constraint and
-# are noise for everyone else:
+# THE DEPLOYMENT COMMIT IS STANDARD, not an opt-in. Every promotion lands one
+# bookkeeping row on the source branch before promoting, so the promoted tip is
+# always authored by an identity the caller chooses. That exists because some
+# deployment platforms refuse a build whose commit author is not a member of the
+# target team — a promotion whose tip happened to carry an unauthorized author
+# shipped as blocked and never went live. Making the promotion author its own tip
+# closes that structurally. It also gives every repo an auditable promotion
+# record for free. Set `deployment-log-path` to an empty string to skip it.
 #
-#   * `lfs` — mirror Git LFS objects to production. Needed only where the repo
-#     vendors binaries through LFS; without it a production checkout would have
-#     dangling pointers.
-#   * `deployment-log-path` — land a one-line bookkeeping commit on the source
-#     branch before promoting, so the promoted tip is authored by a known
-#     identity. This exists because some deployment platforms refuse a build
-#     whose commit author is not a member of the target team. Repos without that
-#     constraint should leave it unset.
+# The commit touches THAT FILE AND NOTHING ELSE, deliberately: anything wider
+# would start firing the source branch's pipelines on every promotion.
+#
+# `lfs` stays OPT-IN. It is needed only where the repo vendors binaries through
+# LFS; without it a production checkout would have dangling pointers, and with it
+# every other repo pays for a fetch it does not need.
 
 name: promote-repo
 
@@ -90,45 +94,43 @@ on:
         default: false
       deployment-log-path:
         description: >-
-          Path to a markdown log appended with one row per promotion, committed
-          to the source branch before promoting. Empty (the default) skips the
-          commit entirely. Only set this where the promoted tip must be authored
-          by a known identity — see the header.
+          Markdown log appended with one row per promotion, committed to the
+          source branch before promoting. Set to an empty string to skip the
+          commit.
         type: string
         required: false
-        default: ""
+        default: "REPO_DEPLOYMENT_LOG.md"
       deployment-log-description:
         description: >-
-          Text for the log row and the commit message. Ignored when
-          deployment-log-path is empty; defaults to a timestamp when blank.
+          Optional note for the log row and commit message. Blank becomes
+          "production deployment at <time> UTC".
         type: string
         required: false
         default: ""
       commit-author:
         description: >-
-          Author of the deployment-log commit, as "Name <email>". Ignored when
-          deployment-log-path is empty. This is the identity a deployment
-          platform checks, so it is the caller's to choose.
+          Author of the deployment-log commit, as "Name <email>". Must be an
+          identity the production deploy platform accepts — Vercel refuses a
+          build whose commit author is not on its team.
         type: string
         required: false
         default: ""
       committer-name:
-        description: "git user.name for any commit this workflow creates."
+        description: "git user.name for the deployment-log commit."
         type: string
         required: false
         default: "platform-actions"
       committer-email:
-        description: "git user.email for any commit this workflow creates."
+        description: "git user.email for the deployment-log commit."
         type: string
         required: false
         default: "platform-actions@users.noreply.github.com"
     secrets:
       bot-token:
         description: >-
-          PAT for a bot with read/write on the development repo's source and
-          target branches, and write on the production repo's target branch. It
-          must be a PAT rather than GITHUB_TOKEN, or the production push will
-          not trigger the deploy workflows.
+          Bot PAT with write on both repositories' target branch and on the
+          development repository's source branch. A GITHUB_TOKEN will not do —
+          commits it authors do not trigger the production deploys.
         required: true
     outputs:
       promoted-sha:
@@ -253,7 +255,7 @@ jobs:
             # Collapse newlines and pipes to spaces — either would break a
             # markdown table row — then trim.
             description="$(printf '%s' "${LOG_DESCRIPTION:-}" | tr '\n\r|' '   ' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
-            [ -n "$description" ] || description="promotion at ${now_utc}"
+            [ -n "$description" ] || description="production deployment at ${now_utc}"
 
             # The description becomes the promoted HEAD's commit message, so it
             # must not smuggle in the directive guarded against above.

@@ -23,6 +23,14 @@ Platform-wide context those docs assume — what the `vortex:*` script targets
 mean, why production lives in a second organization — stays in the umbrella's
 docs hub.
 
+## Workflow stubs
+
+`workflow-stubs/` holds the caller workflow each consuming repo installs. They
+are meant to be copied in **unedited** — every value that can be pre-set comes
+from an organization-level Actions variable — and each carries a header comment
+and an end-of-stub marker so the file is recognisable later as coming from a
+template.
+
 **This repository is public.** Keep organization names, domains, secret paths,
 account aliases and role names out of these files; pass them in from the calling
 repo. See `CLAUDE.md`.

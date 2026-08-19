@@ -37,6 +37,11 @@ as an input or a secret from the calling repo instead of writing it here.
 - **Scheduled automation** — workflows on a `schedule:` trigger that run *here*
   rather than in a service repo, because they belong to the platform rather than
   to any one service.
+- **`workflow-stubs/`** — the caller workflow a consuming repo installs, one per
+  shared workflow. Copied in unedited: every value that can be pre-set resolves
+  from an organization-level Actions variable or from the `github` context, so a
+  service repo adopting one configures nothing. Each carries a header comment and
+  an end-of-stub marker so the file stays recognisable as coming from a template.
 - **`docs/`** — how to *call* what lives here: the caller stub, inputs, secrets
   and failure modes, one doc per shared workflow. These sit beside the workflow
   they describe rather than in the umbrella, because their subject is one
