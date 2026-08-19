@@ -1,0 +1,312 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+# Two-org promotion for any service repo on the platform.
+#
+# Fast-forwards a development branch onto a release branch in the DEVELOPMENT
+# repo, publishes that branch to the development origin, then publishes it to
+# the PRODUCTION organization. That last push is what fires the production
+# deploy workflows — this file never deploys anything itself.
+#
+# A consuming repo calls this from a short stub in the PRODUCTION copy of the
+# repo. The stub to paste, and the variables it depends on, are in:
+#   platform-actions/docs/promoting-to-production.md
+#
+# WHY THE ORG AND REPO NAMES ARE INPUTS. This repository is PUBLIC — that is
+# deliberate, because a reusable workflow in a private repo can only be called
+# from repos in the same organization, and this platform spans two. Everything
+# an outside reader could learn about how the platform is laid out therefore
+# comes in as an input from the caller rather than being written here.
+#
+# Design invariants, carried over from the proxon implementation this
+# generalizes. Each one is load-bearing:
+#
+#   * MANUAL ONLY. Promotion is a deliberate gate. The stub should expose this
+#     through `workflow_dispatch` and nothing else — no push, cron or
+#     repository_dispatch trigger.
+#   * PRODUCTION ORG ONLY. The stub is mirrored into the development repo by the
+#     promotion itself, so it must be inert there. Gate the calling job on the
+#     repo variable that identifies the production org.
+#   * FF-ONLY AT BOTH HOPS. source/target and dev-target/prod-target must never
+#     diverge. `--ff-only` fails loudly rather than inventing a merge commit.
+#   * PUSHES RIDE A BOT PAT, NOT `GITHUB_TOKEN`. A GITHUB_TOKEN-authored push
+#     does NOT trigger downstream workflow runs — and firing the production
+#     deploys is the entire point of the last push.
+#   * THE TOKEN NEVER REACHES THE LOG. Remotes carry the token in their URL, so
+#     `set -x` is deliberately NOT enabled and no command echoes a remote URL.
+#   * THE SOURCE BRANCH IS NEVER FORCE-PUSHED. If it moved mid-run the push is
+#     rejected, which is the correct loud failure. Re-dispatch.
+#
+# THE DEPLOYMENT COMMIT IS STANDARD, not an opt-in. Every promotion lands one
+# bookkeeping row on the source branch before promoting, so the promoted tip is
+# always authored by an identity the caller chooses. That exists because some
+# deployment platforms refuse a build whose commit author is not a member of the
+# target team — a promotion whose tip happened to carry an unauthorized author
+# shipped as blocked and never went live. Making the promotion author its own tip
+# closes that structurally. It also gives every repo an auditable promotion
+# record for free. Set `deployment-log-path` to an empty string to skip it.
+#
+# The commit touches THAT FILE AND NOTHING ELSE, deliberately: anything wider
+# would start firing the source branch's pipelines on every promotion.
+#
+# `lfs` stays OPT-IN. It is needed only where the repo vendors binaries through
+# LFS; without it a production checkout would have dangling pointers, and with it
+# every other repo pays for a fetch it does not need.
+
+name: promote-repo
+
+on:
+  workflow_call:
+    inputs:
+      dev-owner:
+        description: "Owner of the development repository — the source of truth."
+        type: string
+        required: true
+      dev-repo:
+        description: "Name of the development repository."
+        type: string
+        required: true
+      prod-owner:
+        description: "Owner of the production repository — the promotion destination."
+        type: string
+        required: true
+      prod-repo:
+        description: "Name of the production repository."
+        type: string
+        required: true
+      source-branch:
+        description: "Branch being promoted."
+        type: string
+        required: false
+        default: "develop"
+      target-branch:
+        description: >-
+          Branch promoted onto, in BOTH repositories. Pushing it to the
+          production repository is what triggers the production deploys.
+        type: string
+        required: false
+        default: "main"
+      lfs:
+        description: >-
+          Mirror Git LFS objects to the production repository. Leave false
+          unless the repo actually stores binaries through LFS.
+        type: boolean
+        required: false
+        default: false
+      deployment-log-path:
+        description: >-
+          Markdown log appended with one row per promotion, committed to the
+          source branch before promoting. Set to an empty string to skip the
+          commit.
+        type: string
+        required: false
+        default: "REPO_DEPLOYMENT_LOG.md"
+      deployment-log-description:
+        description: >-
+          Optional note for the log row and commit message. Blank becomes
+          "production deployment at <time> UTC".
+        type: string
+        required: false
+        default: ""
+      commit-author:
+        description: >-
+          Author of the deployment-log commit, as "Name <email>". Must be an
+          identity the production deploy platform accepts — Vercel refuses a
+          build whose commit author is not on its team.
+        type: string
+        required: false
+        default: ""
+      committer-name:
+        description: "git user.name for the deployment-log commit."
+        type: string
+        required: false
+        default: "platform-actions"
+      committer-email:
+        description: "git user.email for the deployment-log commit."
+        type: string
+        required: false
+        default: "platform-actions@users.noreply.github.com"
+    secrets:
+      bot-token:
+        description: >-
+          Bot PAT with write on both repositories' target branch and on the
+          development repository's source branch. A GITHUB_TOKEN will not do —
+          commits it authors do not trigger the production deploys.
+        required: true
+    outputs:
+      promoted-sha:
+        description: "The commit now on the target branch in both repositories."
+        value: ${{ jobs.promote.outputs.promoted-sha }}
+
+# Cross-org read and write both ride the bot PAT over tokened HTTPS remotes, so
+# no repo-scoped GITHUB_TOKEN write is needed.
+permissions:
+  contents: read
+
+jobs:
+  promote:
+    name: FF source onto target, then mirror to production
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # Serialize promotions per calling repository. A cancelled half-pushed
+    # promotion is worse than a queued one, so never cancel in progress.
+    concurrency:
+      group: promote-repo-${{ github.repository }}
+      cancel-in-progress: false
+
+    outputs:
+      promoted-sha: ${{ steps.promote.outputs.promoted-sha }}
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      # Check out the DEVELOPMENT repo at the target branch. `origin` is
+      # therefore the development repo; `production` is added in the script.
+      # Cross-org checkout needs the PAT — the default token cannot read another
+      # organization.
+      - name: Checkout the development repository
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ inputs.dev-owner }}/${{ inputs.dev-repo }}
+          ref: ${{ inputs.target-branch }}
+          # Full history so both fast-forward merge-bases are present
+          # (source/target and dev-target/prod-target). A shallow clone would
+          # reject the fast-forward.
+          fetch-depth: 0
+          # Manage remote auth ourselves below, so every push is authored by the
+          # PAT and checkout's persisted credentials are not inherited onto the
+          # second remote.
+          persist-credentials: false
+          # LFS objects are fetched explicitly after the merge, when requested.
+          lfs: false
+          token: ${{ secrets.bot-token }}
+
+      - name: Promote
+        id: promote
+        env:
+          BOT_TOKEN: ${{ secrets.bot-token }}
+          DEV_OWNER: ${{ inputs.dev-owner }}
+          DEV_REPO: ${{ inputs.dev-repo }}
+          PROD_OWNER: ${{ inputs.prod-owner }}
+          PROD_REPO: ${{ inputs.prod-repo }}
+          SOURCE_BRANCH: ${{ inputs.source-branch }}
+          TARGET_BRANCH: ${{ inputs.target-branch }}
+          WITH_LFS: ${{ inputs.lfs }}
+          LOG_PATH: ${{ inputs.deployment-log-path }}
+          # Read through the environment and NEVER interpolated into the script
+          # body, so a caller-supplied string cannot inject shell.
+          LOG_DESCRIPTION: ${{ inputs.deployment-log-description }}
+          COMMIT_AUTHOR: ${{ inputs.commit-author }}
+          COMMITTER_NAME: ${{ inputs.committer-name }}
+          COMMITTER_EMAIL: ${{ inputs.committer-email }}
+        run: |
+          set -euo pipefail
+
+          [ -n "${BOT_TOKEN}" ] || {
+            echo "::error::secrets.bot-token is unset — cannot promote"
+            exit 1
+          }
+
+          git config user.name  "${COMMITTER_NAME}"
+          git config user.email "${COMMITTER_EMAIL}"
+
+          # Tokened HTTPS remotes. The token stays inside the URLs; nothing
+          # echoes them and `set -x` is deliberately not enabled, so the PAT
+          # cannot leak to the run log.
+          git remote set-url origin \
+            "https://x-access-token:${BOT_TOKEN}@github.com/${DEV_OWNER}/${DEV_REPO}.git"
+          git remote add production \
+            "https://x-access-token:${BOT_TOKEN}@github.com/${PROD_OWNER}/${PROD_REPO}.git"
+
+          # Explicit refspecs rather than `git fetch origin <branch>`: that form
+          # only updates refs/remotes/* if the checked-out clone happens to be
+          # configured with a matching fetch refspec, and actions/checkout writes
+          # a narrow one. Being explicit makes origin/<branch> exist regardless.
+          git fetch --no-tags origin \
+            "+refs/heads/${SOURCE_BRANCH}:refs/remotes/origin/${SOURCE_BRANCH}" \
+            "+refs/heads/${TARGET_BRANCH}:refs/remotes/origin/${TARGET_BRANCH}"
+
+          echo "source     (was) = $(git rev-parse "origin/${SOURCE_BRANCH}")"
+          echo "dev target (was) = $(git rev-parse HEAD)"
+          echo "prod target(was) = $(git ls-remote production "refs/heads/${TARGET_BRANCH}" | cut -f1)"
+
+          # A CI-skip directive is a GitHub PLATFORM skip applied to the HEAD
+          # commit of a push. One sitting on a promoted tip silently cancels
+          # every downstream production job while this workflow still reports
+          # success. Capture the message into a variable first: piping git log
+          # straight into `grep -q` lets grep exit on the first match while git
+          # is still writing, and under `pipefail` that SIGPIPE reads as "no
+          # match".
+          skip_re='\[(skip[ -]ci|ci[ -]skip|no[ -]ci|skip[ -]actions|actions[ -]skip)\]'
+          content_tip_msg="$(git log -1 --pretty=%B "origin/${SOURCE_BRANCH}")"
+          if printf '%s' "$content_tip_msg" | grep -qiE "$skip_re"; then
+            echo "::warning::${SOURCE_BRANCH}'s tip $(git rev-parse --short "origin/${SOURCE_BRANCH}") carries a CI-skip directive, so it never ran the source pipelines. Promoting it anyway — the content is unvalidated."
+          fi
+
+          promoted="$(git rev-parse "origin/${SOURCE_BRANCH}")"
+
+          # Optional bookkeeping commit on the source branch. It touches ONE
+          # file by design: anything wider would start firing the source
+          # branch's pipelines on every promotion.
+          if [ -n "${LOG_PATH}" ]; then
+            now_utc="$(date -u '+%Y-%m-%d %H:%M UTC')"
+            # Collapse newlines and pipes to spaces — either would break a
+            # markdown table row — then trim.
+            description="$(printf '%s' "${LOG_DESCRIPTION:-}" | tr '\n\r|' '   ' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+            [ -n "$description" ] || description="production deployment at ${now_utc}"
+
+            # The description becomes the promoted HEAD's commit message, so it
+            # must not smuggle in the directive guarded against above.
+            if printf '%s' "$description" | grep -qiE "$skip_re"; then
+              echo "::error::the description carries a CI-skip directive, which would land on the promoted HEAD and cancel every downstream production job. Re-dispatch with a plain description."
+              exit 1
+            fi
+
+            git checkout --quiet -B promote-source "origin/${SOURCE_BRANCH}"
+            printf '| %s | %s |\n' "$now_utc" "$description" >>"${LOG_PATH}"
+            git add -- "${LOG_PATH}"
+            if [ -n "${COMMIT_AUTHOR}" ]; then
+              git commit --quiet --author="${COMMIT_AUTHOR}" -m "chore(deploy): ${description}"
+            else
+              git commit --quiet -m "chore(deploy): ${description}"
+            fi
+            promoted="$(git rev-parse HEAD)"
+
+            # Publish it to the source branch. Plain fast-forward push: a
+            # rejection means the branch moved mid-run — re-dispatch, never
+            # force.
+            git push --no-verify origin "HEAD:${SOURCE_BRANCH}"
+            echo "source     (now) = ${promoted}"
+          fi
+
+          # Fast-forward the development repo's target branch. `--ff-only` fails
+          # loudly if it has diverged from the source branch, which must never
+          # happen.
+          git checkout --quiet "${TARGET_BRANCH}"
+          git merge --ff-only "$promoted"
+
+          if [ "${WITH_LFS}" = "true" ]; then
+            # Pull the source branch's LFS objects into the local cache so the
+            # explicit push below has them. `--no-verify` on the pushes skips
+            # git-lfs's pre-push auto-upload, so the explicit push is the
+            # authoritative upload.
+            git lfs fetch --all origin
+          fi
+
+          # Publish the target branch to the development origin. On a repo
+          # following this pattern the development target branch maps to no
+          # environment, so this push is deploy-inert.
+          git push --no-verify origin "HEAD:${TARGET_BRANCH}"
+
+          # Publish to production. Authored by the PAT, so THIS push triggers
+          # the production deploy workflows.
+          git push --no-verify production "HEAD:${TARGET_BRANCH}"
+
+          if [ "${WITH_LFS}" = "true" ]; then
+            git lfs push --all production
+          fi
+
+          echo "promoted-sha=${promoted}" >>"$GITHUB_OUTPUT"
+          echo "SUCCEEDED — both target branches are now $(git rev-parse --short HEAD)"

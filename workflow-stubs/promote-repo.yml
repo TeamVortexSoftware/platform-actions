@@ -1,0 +1,36 @@
+# From the vortex 'promote-repo' workflow template must be installed as vtx-promote-repo.yml'.
+# See platform-actions/docs/promoting-to-production.md
+name: "[VTX] Promote Repo (dev develop → dev main → prod main)"
+
+on:
+    workflow_dispatch:
+        inputs:
+            description:
+                description: 'REPO_DEPLOYMENT_LOG.md entry (blank → "production deployment at <time> UTC")'
+                type: string
+                required: false
+                default: ""
+
+jobs:
+    promote-repo:
+        # Production org only — inert in the development mirror of this file.
+        if: ${{ vars.VTX_INFRA_ENV == 'production' }}
+        # `uses:` cannot take an expression, so this one org is a literal.
+        uses: TeamVortexSoftware/platform-actions/.github/workflows/promote-repo.yml@main
+        with:
+            dev-owner: ${{ vars.VTX_INFRA_DEV_GH_ORG }}
+            dev-repo: ${{ github.event.repository.name }}
+            prod-owner: ${{ vars.VTX_INFRA_PROD_GH_ORG }}
+            prod-repo: ${{ github.event.repository.name }}
+            source-branch: develop
+            target-branch: main
+            deployment-log-path: REPO_DEPLOYMENT_LOG.md
+            deployment-log-description: ${{ inputs.description }}
+            commit-author: ${{ vars.VTX_INFRA_PROD_COMMIT_AUTHOR }}
+            committer-name: ${{ vars.VTX_INFRA_PROD_BOT_USER }}
+            committer-email: ${{ vars.VTX_INFRA_PROD_BOT_USER }}@users.noreply.github.com
+            lfs: false
+        secrets:
+            bot-token: ${{ secrets.VTX_INFRA_PROD_BOT_PAT }}
+
+####   End of Stub  ----  Make all edits below this line  #####

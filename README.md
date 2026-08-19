@@ -8,3 +8,29 @@ issuance and renewal).
 Part of the [platform-repos](https://github.com/TeamVortexSoftware/platform-repos)
 umbrella, where it is incorporated as a git submodule; see that repo's `docs/`
 hub for platform-wide documentation.
+
+## Docs
+
+How to call what lives here — the caller stub, inputs, secrets and failure modes
+— is documented beside the workflow it describes:
+
+- [Standard repo workflows](docs/standard-repo-workflows.md) — `repo-verify.yml`,
+  the shared pull-request verification workflow
+- [Promoting a repo to production](docs/promoting-to-production.md) —
+  `promote-repo.yml`, the shared two-org promotion workflow
+
+Platform-wide context those docs assume — what the `vortex:*` script targets
+mean, why production lives in a second organization — stays in the umbrella's
+docs hub.
+
+## Workflow stubs
+
+`workflow-stubs/` holds the caller workflow each consuming repo installs. They
+are meant to be copied in **unedited** — every value that can be pre-set comes
+from an organization-level Actions variable — and each carries a header comment
+and an end-of-stub marker so the file is recognisable later as coming from a
+template.
+
+**This repository is public.** Keep organization names, domains, secret paths,
+account aliases and role names out of these files; pass them in from the calling
+repo. See `CLAUDE.md`.

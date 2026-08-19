@@ -37,6 +37,22 @@ as an input or a secret from the calling repo instead of writing it here.
 - **Scheduled automation** — workflows on a `schedule:` trigger that run *here*
   rather than in a service repo, because they belong to the platform rather than
   to any one service.
+- **`workflow-stubs/`** — the caller workflow a consuming repo installs, one per
+  shared workflow. Copied in unedited: every value that can be pre-set resolves
+  from an organization-level Actions variable or from the `github` context, so a
+  service repo adopting one configures nothing. Each carries a header comment and
+  an end-of-stub marker so the file stays recognisable as coming from a template.
+- **`docs/`** — how to *call* what lives here: the caller stub, inputs, secrets
+  and failure modes, one doc per shared workflow. These sit beside the workflow
+  they describe rather than in the umbrella, because their subject is one
+  artifact in this repo. A wide audience is not what makes a doc cross-repo —
+  see the home rules in the umbrella's `docs/documentation-map.md`. The umbrella
+  keeps a pointer so they stay findable from the hub.
+
+  Platform-wide context those docs assume — the `vortex:*` target namespace, why
+  production lives in a second GitHub organization — stays in the umbrella. That
+  split is also what keeps organization names and topology out of this public
+  repo.
 
 Nothing here is built, published, or deployed on its own. It is consumed by
 reference (`uses:`), so a change to a workflow on `main` reaches every consumer
@@ -49,7 +65,7 @@ That is the trade for keeping the logic in one place: **a broken workflow on
 `repo-verify.yml` runs a repo's `vortex:<concern>:all` scripts. The namespace,
 what each concern means, and which of them mutate are defined in
 `platform-repos/docs/script-targets.md`. The caller stub and adoption steps are
-in `platform-repos/docs/how-tos/standard-repo-workflows.md`.
+in `docs/standard-repo-workflows.md`.
 
 Do not encode a repo's specifics in a shared workflow — that is what the targets
 exist to avoid. If a workflow needs to know something repo-shaped, it becomes an
