@@ -93,6 +93,10 @@ on:
         description: "npm token with read access to the @teamvortexsoftware scope."
         required: false
 
+# The caller must grant contents:write. A called workflow can hold no more than
+# its caller, and the platform's repos default to read-only — so a stub without
+# its own `permissions:` block fails the run at startup, before any job starts,
+# with only "workflow file issue" to go on.
 permissions:
   contents: write
 

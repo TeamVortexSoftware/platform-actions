@@ -14,6 +14,12 @@ on:
                 type: string
                 required: true
 
+# The called workflow creates a Release and pushes to a tap, and a called
+# workflow can hold no more permission than its caller grants. The repo default
+# is read-only, so without this the run fails at startup before any job begins.
+permissions:
+    contents: write
+
 jobs:
     release:
         # `uses:` cannot take an expression, so this one org is a literal.
