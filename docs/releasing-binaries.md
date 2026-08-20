@@ -10,6 +10,7 @@ rather than copying it.
 <!-- vtxmd:toc from-level=2 to-level=2 -->
 * [What it does](#what-it-does)
 * [The build stays in the repo](#the-build-stays-in-the-repo)
+* [When the build needs the CLI itself](#when-the-build-needs-the-cli-itself)
 * [Three fields move together](#three-fields-move-together)
 * [The tap credential](#the-tap-credential)
 * [The caller grants the permission](#the-caller-grants-the-permission)
@@ -44,6 +45,13 @@ nothing narrower — see
 The repo decides what building for a target means. That is what keeps this file
 free of any one toolchain, and what lets a repo change how it compiles without
 touching `platform-actions`.
+
+## When the build needs the CLI itself
+
+If a repo's `vortex:build:all` shells out to a bare `vortex`, set
+`install-vortex-cli: true` and the build job puts the latest CLI on PATH first.
+Same composite action, same reasoning, as the verification workflow — see
+[standard-repo-workflows.md](standard-repo-workflows.md).
 
 ## Three fields move together
 

@@ -79,6 +79,14 @@ on:
         type: string
         required: false
         default: "recursive"
+      install-vortex-cli:
+        description: >-
+          Put the vortex CLI on PATH before building. Needed where
+          vortex:build:all shells out to a bare `vortex`. Opt-in; requires
+          npm-token.
+        type: boolean
+        required: false
+        default: false
     secrets:
       tap-token:
         description: >-
@@ -169,6 +177,12 @@ jobs:
 
       - name: Install
         run: pnpm install --frozen-lockfile
+
+      - name: Setup vortex CLI
+        if: ${{ inputs.install-vortex-cli }}
+        uses: TeamVortexSoftware/platform-actions/actions/setup-vortex-cli@main
+        with:
+          npm-token: ${{ secrets.npm-token }}
 
       - name: vortex:build:all
         run: pnpm run vortex:build:all

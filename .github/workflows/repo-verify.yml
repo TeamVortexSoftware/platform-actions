@@ -55,6 +55,15 @@ on:
         type: boolean
         required: false
         default: false
+      install-vortex-cli:
+        description: >-
+          Put the vortex CLI on PATH before running the targets. Needed where a
+          target shells out to a bare `vortex` — vortex:generate:all in the infra
+          repos does. Opt-in, because installing it costs time in every repo that
+          does not need it. Requires npm-token.
+        type: boolean
+        required: false
+        default: false
     secrets:
       ssh-key:
         description: >-
@@ -116,6 +125,12 @@ jobs:
 
       - name: Install
         run: pnpm install --frozen-lockfile
+
+      - name: Setup vortex CLI
+        if: ${{ inputs.install-vortex-cli }}
+        uses: TeamVortexSoftware/platform-actions/actions/setup-vortex-cli@main
+        with:
+          npm-token: ${{ secrets.npm-token }}
 
       - name: vortex:lint:all
         run: pnpm run --if-present vortex:lint:all

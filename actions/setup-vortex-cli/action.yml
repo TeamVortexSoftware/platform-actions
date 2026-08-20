@@ -1,0 +1,78 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-action.json
+
+# Put the vortex CLI on PATH for a job that needs it.
+#
+# A repo's `vortex:<concern>:all` target may shell out to a bare `vortex` —
+# `vortex:generate:all` in the infra repos does. Anything shared that runs those
+# targets therefore has to make sure the command exists, rather than assuming a
+# copy is lying around.
+#
+# It installs GLOBALLY and does not reach into node_modules. A repo may or may
+# not carry config-utility as a dependency, and that is the repo's business —
+# see the umbrella's docs on the two install channels. A shared workflow that
+# depended on the dependency being there would silently do different things in
+# different repos.
+#
+# NO VERSION PIN, deliberately. A runner starts clean every time, so latest is
+# both the simplest thing to install and the most current — and it means the
+# CLI's own staleness gate never has cause to fire in CI. Pinning would create a
+# version to remember to bump, whose staleness would then surface as a CI
+# failure nobody was expecting.
+#
+# npm rather than Homebrew: brew on a runner is slow, and the npm registry token
+# is a credential the platform's CI already has.
+
+name: Setup vortex CLI
+description: Ensure the vortex CLI is on PATH, installing the latest globally if it is absent.
+
+inputs:
+  npm-token:
+    description: >-
+      npm token with read access to the scope the CLI is published under.
+      Required unless the CLI is already present.
+    required: false
+  package:
+    description: "npm package providing the CLI."
+    required: false
+    default: "@teamvortexsoftware/config-utility"
+
+runs:
+  using: composite
+  steps:
+    - name: Install the vortex CLI if it is not already present
+      shell: bash
+      env:
+        NPM_TOKEN: ${{ inputs.npm-token }}
+        PACKAGE: ${{ inputs.package }}
+      run: |
+        set -euo pipefail
+
+        # Check first. A job that already installed it, or a runner image that
+        # ships it, needs nothing — and reinstalling would be the slow path on
+        # every single run.
+        if command -v vortex >/dev/null 2>&1; then
+          echo "vortex already on PATH: $(command -v vortex)"
+          vortex --version --no-check || true
+          exit 0
+        fi
+
+        if [ -z "${NPM_TOKEN}" ]; then
+          echo "::error::vortex is not on PATH and no npm-token was given, so it cannot be installed. Pass the npm-token secret." >&2
+          exit 1
+        fi
+
+        # User-level, never a project .npmrc: pnpm refuses to expand ${NPM_TOKEN}
+        # from a committed one, and every repo's .npmrc says so.
+        echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
+
+        npm install -g "${PACKAGE}@latest"
+
+        # Assert rather than assume. A global install that lands somewhere off
+        # PATH exits 0 and leaves the next step failing on "command not found",
+        # which reads as a problem with that step instead of with this one.
+        if ! command -v vortex >/dev/null 2>&1; then
+          echo "::error::Installed ${PACKAGE} but vortex is still not on PATH." >&2
+          exit 1
+        fi
+        echo "installed: $(command -v vortex)"
+        vortex --version --no-check
