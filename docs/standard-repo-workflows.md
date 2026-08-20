@@ -10,6 +10,7 @@ it is a copy-paste plus whatever plumbing the repo's own targets need.
 * [What you get](#what-you-get)
 * [The stub](#the-stub)
 * [What each target has to satisfy](#what-each-target-has-to-satisfy)
+* [When a target needs the CLI itself](#when-a-target-needs-the-cli-itself)
 * [No AWS session](#no-aws-session)
 * [Inputs and secrets](#inputs-and-secrets)
 * [Adopting it in a repo](#adopting-it-in-a-repo)
@@ -87,6 +88,28 @@ didn't regenerate; the fix is to run the target locally and commit the result.
 `vortex:build:all` runs _after_ that check, and only when you ask for it. Build
 output isn't committed, so a dirty tree after building means `dist/` isn't
 ignored — a different bug, and one you don't want reported as a drift failure.
+
+## When a target needs the CLI itself
+
+Some `vortex:<concern>:all` targets shell out to a bare `vortex` —
+`vortex:generate:all` does in the infra repos. Set `install-vortex-cli: true`
+and the workflow puts the CLI on PATH before running any target, using the
+`setup-vortex-cli` composite action.
+
+It installs **globally** and never reaches into `node_modules`. Whether a repo
+also carries `config-utility` as a dependency is that repo's own decision, and a
+shared workflow that relied on it would quietly do different things in different
+repos.
+
+There is **no version pin**. A runner starts clean every time, so latest is both
+the simplest thing to install and the most current — which also means the CLI's
+own staleness gate never has cause to fire in CI. A pin would be one more number
+to remember to bump, and its staleness would surface as a CI failure nobody was
+expecting.
+
+It checks before installing, so a job that already has the CLI pays nothing. It
+needs the `npm-token` secret, and fails with a clear message rather than a later
+`command not found` if the token is missing or the install lands off PATH.
 
 ## No AWS session
 
