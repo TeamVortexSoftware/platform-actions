@@ -12,6 +12,7 @@ rather than copying it.
 * [The build stays in the repo](#the-build-stays-in-the-repo)
 * [Three fields move together](#three-fields-move-together)
 * [The tap credential](#the-tap-credential)
+* [The caller grants the permission](#the-caller-grants-the-permission)
 * [Inputs and secrets](#inputs-and-secrets)
 * [Nothing private is hardcoded here](#nothing-private-is-hardcoded-here)
 * [Gotcha: a stale Homebrew cache hides download failures](#gotcha-a-stale-homebrew-cache-hides-download-failures)
@@ -69,6 +70,16 @@ repo, passed as the `tap-token` secret.
 Wire it through core infrastructure — `global_env_vars.repository_secrets` in
 `infra-data-*/data/core-infra/repos.yml` — not through the GitHub UI, so it is
 declared like every other platform secret.
+
+## The caller grants the permission
+
+The stub carries `permissions: contents: write`. A called workflow can hold no
+more permission than its caller grants, and repos on this platform default to
+read-only — so a stub without that block fails **at startup**, before any job
+runs, reporting only "This run likely failed because of a workflow file issue".
+There is no log to read, because nothing started.
+
+`repo-verify` needs no equivalent because it only reads.
 
 ## Inputs and secrets
 
