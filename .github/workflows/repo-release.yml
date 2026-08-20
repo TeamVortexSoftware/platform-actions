@@ -271,9 +271,13 @@ jobs:
           # Three fields move together every release: the version, the asset id
           # in the URL, and the checksum. Rewriting only some of them yields a
           # formula that installs the previous binary under the new version.
-          perl -pi -e 's{^(\s*version\s+")[^"]*(")}{$1'"$VERSION"'$2}' "$FORMULA"
+          # ${1} and ${2}, never $1 and $2: every value spliced in here starts
+          # with a digit or a hex char, so a bare $1 followed by "1.16.0" reads
+          # as capture group 11 — which does not exist, and expands to nothing.
+          # That silently ate the version and the checksum on the first run.
+          perl -pi -e 's{^(\s*version\s+")[^"]*(")}{${1}'"$VERSION"'${2}}' "$FORMULA"
           perl -pi -e 's{(releases/assets/)\d+}{${1}'"$ASSET_ID"'}' "$FORMULA"
-          perl -pi -e 's{^(\s*sha256\s+")[0-9a-f]{64}(")}{$1'"$ASSET_SHA"'$2}' "$FORMULA"
+          perl -pi -e 's{^(\s*sha256\s+")[0-9a-f]{64}(")}{${1}'"$ASSET_SHA"'${2}}' "$FORMULA"
 
           git diff -- "$FORMULA"
 
