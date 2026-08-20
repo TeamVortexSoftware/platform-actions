@@ -1,0 +1,296 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+# Standard binary release for any repo on the platform: build the artifacts,
+# attach them to a GitHub Release, and point a Homebrew formula at them.
+#
+# A consuming repo calls this from a stub in its own .github/workflows/; all the
+# logic lives here, so the next tool distributed this way reuses it rather than
+# copying it. The stub to paste is in:
+#   platform-actions/docs/standard-repo-workflows.md
+#
+# What it does, and why in this order:
+#   1. guard    the tag exists and names the version being released
+#   2. build    one job per target, via the repo's own vortex:build:all
+#   3. release  create the Release and upload every artifact
+#   4. tap      rewrite the formula and push it
+#
+# The build is the REPO's job, not this workflow's. Per docs/script-targets.md,
+# shared workflows call `vortex:<concern>:all` and nothing else — so this passes
+# the target down as VORTEX_BUILD_TARGET and lets the repo decide what building
+# for it means. That is what keeps this file free of any one toolchain.
+#
+# It releases a version that already exists. It never bumps a version, never
+# edits a changelog, and never publishes to npm — those belong to the repo's own
+# release script, which is what invokes this.
+#
+# NOTE ON THIS REPO BEING PUBLIC: every name here arrives as an input. Do not
+# hardcode a repository, an owner, a formula or a tap — this file is
+# world-readable and would otherwise publish the platform's private topology.
+
+name: repo-release
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: "Version being released, without a leading v (e.g. 1.16.0)."
+        type: string
+        required: true
+      tag:
+        description: "Tag to release from. Must already exist and hold the version above."
+        type: string
+        required: true
+      targets:
+        description: >-
+          JSON array of build targets, e.g. '["darwin-arm64","linux-x64"]'. Each
+          becomes one build job and is passed to the repo as VORTEX_BUILD_TARGET.
+        type: string
+        required: true
+      artifact-glob:
+        description: "Where the repo leaves its artifacts, relative to the repo root."
+        type: string
+        required: false
+        default: "dist-binary/*"
+      tap-repo:
+        description: >-
+          owner/name of the Homebrew tap to update. Omit to skip the tap step —
+          a repo can publish binaries without a formula.
+        type: string
+        required: false
+        default: ""
+      formula-path:
+        description: "Path to the formula within the tap, e.g. Formula/vortex.rb."
+        type: string
+        required: false
+        default: ""
+      asset-pattern:
+        description: >-
+          Which artifact the formula points at, as a shell glob against the
+          uploaded names. Must match exactly one.
+        type: string
+        required: false
+        default: ""
+      node-version:
+        description: "Node version. Defaults to the repo's .nvmrc."
+        type: string
+        required: false
+      submodules:
+        description: "Passed to actions/checkout: 'recursive', 'true' or 'false'."
+        type: string
+        required: false
+        default: "recursive"
+    secrets:
+      tap-token:
+        description: >-
+          Token with contents:write on the TAP repo. Required when tap-repo is
+          set. The job's own GITHUB_TOKEN cannot reach a second repository,
+          which is the only reason a separate credential exists here.
+        required: false
+      ssh-key:
+        description: "Deploy/SSH key with read access to any private submodules."
+        required: false
+      npm-token:
+        description: "npm token with read access to the @teamvortexsoftware scope."
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the tag
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag }}
+          submodules: "false"
+
+      - name: Tag names the version being released
+        # Catches the whole class of "released the wrong commit" before anything
+        # is built or published. A Release is visible the moment it is created,
+        # so the check has to come first, not after the upload.
+        env:
+          EXPECTED: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          actual=$(node -p "require('./package.json').version")
+          if [ "$actual" != "$EXPECTED" ]; then
+            echo "::error::Tag ${{ inputs.tag }} holds version $actual, but this release says $EXPECTED." >&2
+            exit 1
+          fi
+          echo "$actual at ${{ inputs.tag }}"
+
+  build:
+    needs: guard
+    runs-on: ubuntu-latest
+    strategy:
+      # One failed target must not cancel the others: knowing that linux built
+      # and darwin did not is the useful outcome.
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(inputs.targets) }}
+
+    env:
+      NPM_TOKEN: ${{ secrets.npm-token }}
+      VORTEX_BUILD_TARGET: ${{ matrix.target }}
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout the tag
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag }}
+          submodules: ${{ inputs.submodules }}
+          ssh-key: ${{ secrets.ssh-key }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          run_install: false
+
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ inputs.node-version }}
+          node-version-file: ".nvmrc"
+          cache: pnpm
+
+      - name: Configure npm auth
+        if: ${{ env.NPM_TOKEN != '' }}
+        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: vortex:build:all
+        run: pnpm run vortex:build:all
+
+      - name: Artifacts were produced
+        # `pnpm run` succeeding is not evidence that anything was built — a
+        # target that is a placeholder echo exits 0 and leaves an empty release.
+        env:
+          GLOB: ${{ inputs.artifact-glob }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=( $GLOB )
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "::error::vortex:build:all produced nothing matching $GLOB." >&2
+            exit 1
+          fi
+          printf '%s\n' "${files[@]}"
+
+      - name: Upload for the release job
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.target }}
+          path: ${{ inputs.artifact-glob }}
+          if-no-files-found: error
+          retention-days: 1
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    outputs:
+      asset-id: ${{ steps.locate.outputs.asset-id }}
+      asset-sha: ${{ steps.locate.outputs.asset-sha }}
+    steps:
+      - name: Collect every target's artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create the release and upload
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ls -l artifacts/
+          gh release create "${{ inputs.tag }}" \
+            --repo "${{ github.repository }}" \
+            --title "${{ inputs.tag }}" \
+            --notes "Binary distribution. Each archive is a self-contained executable plus the files it reads at run time; the executable alone is not a working install." \
+            artifacts/*
+
+      - name: Locate the asset the formula points at
+        id: locate
+        if: ${{ inputs.tap-repo != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PATTERN: ${{ inputs.asset-pattern }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          # The formula references a numeric asset id, which GitHub assigns on
+          # upload and changes every release — so it has to be read back here
+          # rather than constructed.
+          matches=( artifacts/$PATTERN )
+          if [ ${#matches[@]} -ne 1 ]; then
+            echo "::error::asset-pattern '$PATTERN' matched ${#matches[@]} files; it must match exactly one." >&2
+            printf '%s\n' "${matches[@]}" >&2
+            exit 1
+          fi
+          name=$(basename "${matches[0]}")
+          id=$(gh api "repos/${{ github.repository }}/releases/tags/${{ inputs.tag }}" \
+                 --jq ".assets[] | select(.name == \"$name\") | .id")
+          [ -n "$id" ] || { echo "::error::No uploaded asset named $name." >&2; exit 1; }
+          echo "asset-id=$id" >> "$GITHUB_OUTPUT"
+          echo "asset-sha=$(shasum -a 256 "${matches[0]}" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "$name -> asset $id"
+
+  tap:
+    needs: release
+    if: ${{ inputs.tap-repo != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the tap
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ inputs.tap-repo }}
+          token: ${{ secrets.tap-token }}
+
+      - name: Point the formula at this release
+        env:
+          FORMULA: ${{ inputs.formula-path }}
+          VERSION: ${{ inputs.version }}
+          ASSET_ID: ${{ needs.release.outputs.asset-id }}
+          ASSET_SHA: ${{ needs.release.outputs.asset-sha }}
+        run: |
+          set -euo pipefail
+          [ -f "$FORMULA" ] || { echo "::error::No formula at $FORMULA in ${{ inputs.tap-repo }}." >&2; exit 1; }
+
+          # Three fields move together every release: the version, the asset id
+          # in the URL, and the checksum. Rewriting only some of them yields a
+          # formula that installs the previous binary under the new version.
+          perl -pi -e 's{^(\s*version\s+")[^"]*(")}{$1'"$VERSION"'$2}' "$FORMULA"
+          perl -pi -e 's{(releases/assets/)\d+}{${1}'"$ASSET_ID"'}' "$FORMULA"
+          perl -pi -e 's{^(\s*sha256\s+")[0-9a-f]{64}(")}{$1'"$ASSET_SHA"'$2}' "$FORMULA"
+
+          git diff -- "$FORMULA"
+
+          # Assert the rewrite landed. A silently-unmatched regex would push an
+          # unchanged formula and report success.
+          grep -q "\"$VERSION\"" "$FORMULA" || { echo "::error::version not rewritten." >&2; exit 1; }
+          grep -q "releases/assets/$ASSET_ID" "$FORMULA" || { echo "::error::asset id not rewritten." >&2; exit 1; }
+          grep -q "\"$ASSET_SHA\"" "$FORMULA" || { echo "::error::sha256 not rewritten." >&2; exit 1; }
+
+      - name: Push
+        env:
+          FORMULA: ${{ inputs.formula-path }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- "$FORMULA"; then
+            echo "Formula already points at this release; nothing to push."
+            exit 0
+          fi
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+          git add "$FORMULA"
+          git commit -m "chore: ${{ github.event.repository.name }} $VERSION"
+          git push
