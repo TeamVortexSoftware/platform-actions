@@ -2,30 +2,46 @@
 
 # Standard pull-request verification for any repo on the platform.
 #
-# A consuming repo calls this from a six-line stub in its own
-# .github/workflows/verify.yml; all the logic lives here, so changing what
-# verification means touches this file and no consuming repo. The stub to paste,
-# and what each target has to satisfy, are in:
+# A consuming repo calls this from a short stub in its own
+# .github/workflows/vtx-repo-verify.yml; all the logic lives here, so changing
+# what verification means touches this file and no consuming repo. The stub to
+# install, and what each target has to satisfy, are in:
 #   platform-actions/docs/standard-repo-workflows.md
 #
-# What it runs, and why in this order:
-#   1. vortex:lint:all      read-only
-#   2. vortex:test:all      read-only
-#   3. vortex:generate:all  mutates, then the tree must be clean
-#   4. vortex:build:all     opt-in, and deliberately AFTER the drift check
+# ONE JOB PER CONCERN, running concurrently:
+#
+#   lint      vortex:lint:all
+#   test      vortex:test:all
+#   generate  vortex:generate:all
+#   build     vortex:build:all      (opt-in)
+#
+# They are separate jobs rather than four steps of one so that a single run
+# reports everything that is wrong. Sequentially, a lint failure ends the run
+# and nobody learns whether the tests pass — you fix lint, push, and discover
+# the next failure a run later. Separate jobs also mean separate check names,
+# which is what a branch-protection rule can key off.
+#
+# A DIRTY TREE FAILS THE JOB — every job, not just generate. Each one runs its
+# target and then asserts the working tree is unchanged, via the
+# assert-clean-tree action, with a message saying what a dirty tree means for
+# that concern. `lint` and `test` were always required to be read-only; this is
+# the first time it is enforced rather than documented.
+#
+# That uniformity is what lets `build` run alongside the others. It used to run
+# last, deliberately, so its uncommitted output could not be mistaken for
+# generate's drift — with one job per concern that confusion is structurally
+# impossible, since each job is its own runner with its own checkout. So build
+# is held to the same rule and finally gives an honest message when dist/ is not
+# ignored.
 #
 # Every target is invoked with `pnpm run --if-present`, which exits 0 when the
-# script is undefined — so the whole set can be called unconditionally and a repo
-# that implements only part of it still passes.
+# script is undefined. The default repo profile ships every vortex:<concern>:all
+# as a runnable `echo` placeholder for the repo's keeper to fill in, so the
+# targets are expected to exist; --if-present is the safety net, not the design.
 #
-# Build runs last on purpose. `generate` produces files that are committed and
-# `build` produces artifacts that are not, so only `generate` can be gated on a
-# clean tree. Running build first would make a repo whose dist/ isn't ignored
-# fail the drift check with a message about the wrong problem.
-#
-# No AWS credentials are configured here, by design. If a repo's target needs the
-# vault, that is for the repo to solve inside its own target — a shared workflow
-# every repo calls is the wrong place to hold a role.
+# No AWS credentials are configured here, by design. If a repo's target needs
+# the vault, that is for the repo to solve inside its own target — a shared
+# workflow every repo calls is the wrong place to hold a role.
 
 name: repo-verify
 
@@ -43,14 +59,14 @@ on:
         default: "recursive"
       skip-generate-check:
         description: >-
-          Skip vortex:generate:all and the clean-tree check. For a repo adopting
-          the workflow before its generators are honest — not a permanent state.
+          Skip the generate job entirely. For a repo adopting the workflow
+          before its generators are honest — not a permanent state.
         type: boolean
         required: false
         default: false
       run-build:
         description: >-
-          Also run vortex:build:all. Opt-in: worth it where a PR should prove the
+          Also run the build job. Opt-in: worth it where a PR should prove the
           artifact still builds, noise where nothing is built.
         type: boolean
         required: false
@@ -80,84 +96,92 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
-  verify:
+  lint:
     runs-on: ubuntu-latest
-
-    # Job-level env, because the `secrets` context is not available in a step's
-    # `if:` — `env` is. This is what lets npm auth be genuinely optional.
-    env:
-      NPM_TOKEN: ${{ secrets.npm-token }}
-
-    defaults:
-      run:
-        shell: bash
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+      # Referenced by owner/repo/path@ref rather than ./actions/… — a relative
+      # `uses:` inside a reusable workflow resolves against the CALLER's
+      # checkout, not this repository's, so the local form would not exist.
+      - uses: TeamVortexSoftware/platform-actions/actions/setup-vortex-repo@main
         with:
-          submodules: ${{ inputs.submodules }}
-          ssh-key: ${{ secrets.ssh-key }}
-
-      - name: Setup pnpm
-        # Before setup-node, which needs pnpm on PATH to resolve its cache.
-        # Version comes from the repo's own package.json "packageManager".
-        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
-        with:
-          run_install: false
-
-      - name: Setup node
-        uses: actions/setup-node@v7
-        with:
-          # When node-version is empty, setup-node falls back to the file. The
-          # default profile requires .nvmrc, so the fallback always has a target.
           node-version: ${{ inputs.node-version }}
-          node-version-file: ".nvmrc"
-          cache: pnpm
-
-      - name: Configure npm auth
-        # User-level, never the repo's committed .npmrc: pnpm refuses to expand
-        # ${NPM_TOKEN} from a project .npmrc, and every repo's .npmrc says so.
-        # The token is read from env rather than interpolated into the script.
-        if: ${{ env.NPM_TOKEN != '' }}
-        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
-
-      - name: Install
-        run: pnpm install --frozen-lockfile
-
-      - name: Setup vortex CLI
-        if: ${{ inputs.install-vortex-cli }}
-        uses: TeamVortexSoftware/platform-actions/actions/setup-vortex-cli@main
-        with:
+          submodules: ${{ inputs.submodules }}
+          install-vortex-cli: ${{ inputs.install-vortex-cli }}
+          ssh-key: ${{ secrets.ssh-key }}
           npm-token: ${{ secrets.npm-token }}
 
       - name: vortex:lint:all
         run: pnpm run --if-present vortex:lint:all
 
+      - uses: TeamVortexSoftware/platform-actions/actions/assert-clean-tree@main
+        with:
+          message: >-
+            vortex:lint:all modified the tree. lint is a read-only concern —
+            put mutating fixes in vortex:lint:fix instead.
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: TeamVortexSoftware/platform-actions/actions/setup-vortex-repo@main
+        with:
+          node-version: ${{ inputs.node-version }}
+          submodules: ${{ inputs.submodules }}
+          install-vortex-cli: ${{ inputs.install-vortex-cli }}
+          ssh-key: ${{ secrets.ssh-key }}
+          npm-token: ${{ secrets.npm-token }}
+
       - name: vortex:test:all
         run: pnpm run --if-present vortex:test:all
 
+      - uses: TeamVortexSoftware/platform-actions/actions/assert-clean-tree@main
+        with:
+          message: >-
+            vortex:test:all wrote into the repo. The test battery must leave no
+            trace — write to a temp dir, or gitignore the output.
+
+  generate:
+    if: ${{ !inputs.skip-generate-check }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: TeamVortexSoftware/platform-actions/actions/setup-vortex-repo@main
+        with:
+          node-version: ${{ inputs.node-version }}
+          submodules: ${{ inputs.submodules }}
+          install-vortex-cli: ${{ inputs.install-vortex-cli }}
+          ssh-key: ${{ secrets.ssh-key }}
+          npm-token: ${{ secrets.npm-token }}
+
       - name: vortex:generate:all
-        if: ${{ !inputs.skip-generate-check }}
         run: pnpm run --if-present vortex:generate:all
 
-      - name: Generated files are current
-        # Staging first so a *new* generated file counts as drift; `git diff`
-        # alone ignores untracked paths, which is exactly how a newly generated
-        # file would slip through.
-        if: ${{ !inputs.skip-generate-check }}
-        run: |
-          git add -A
-          if ! git diff --cached --quiet; then
-            echo "::error::vortex:generate:all changed files — a source was edited without regenerating. Run it locally and commit the result."
-            git diff --cached --stat
-            echo "---"
-            git diff --cached
-            exit 1
-          fi
-          echo "Tree is clean after vortex:generate:all."
+      - uses: TeamVortexSoftware/platform-actions/actions/assert-clean-tree@main
+        with:
+          message: >-
+            vortex:generate:all changed files — a source was edited without
+            regenerating. Run it locally and commit the result.
+
+  build:
+    if: ${{ inputs.run-build }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: TeamVortexSoftware/platform-actions/actions/setup-vortex-repo@main
+        with:
+          node-version: ${{ inputs.node-version }}
+          submodules: ${{ inputs.submodules }}
+          install-vortex-cli: ${{ inputs.install-vortex-cli }}
+          ssh-key: ${{ secrets.ssh-key }}
+          npm-token: ${{ secrets.npm-token }}
 
       - name: vortex:build:all
-        if: ${{ inputs.run-build }}
         run: pnpm run --if-present vortex:build:all
+
+      - uses: TeamVortexSoftware/platform-actions/actions/assert-clean-tree@main
+        with:
+          message: >-
+            vortex:build:all left files in the tree. Build output is never
+            committed — add it to .gitignore.

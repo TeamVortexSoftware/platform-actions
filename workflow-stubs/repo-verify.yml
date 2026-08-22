@@ -1,0 +1,34 @@
+# From the vortex 'repo-verify' workflow template. Install as vtx-repo-verify.yml.
+# See platform-actions/docs/standard-repo-workflows.md
+name: "[VTX] Repo Verify"
+
+# Leave `pull_request` BARE. With no `types:` it gives the default set — opened,
+# synchronize, reopened — which is what verification wants. Adding
+# `types: [opened]` would mean a PR that fails, gets fixed and is re-pushed never
+# re-verifies, leaving a green tick on a tree that no longer exists.
+#
+# `workflow_dispatch` is for running verification against a branch on demand —
+# re-checking after a shared-workflow change lands, or checking a branch that has
+# no PR yet. GitHub only offers it in the UI once this file is on the default
+# branch.
+on:
+    pull_request:
+    workflow_dispatch:
+
+jobs:
+    verify:
+        # `uses:` cannot take an expression, so this one org is a literal.
+        uses: TeamVortexSoftware/platform-actions/.github/workflows/repo-verify.yml@main
+        secrets:
+            # NPM_READ_TOKEN, not NPM_TOKEN. The read credential is published as
+            # an ORG-level Actions secret under that name, so every repo has it
+            # and this stub goes in unedited. NPM_TOKEN exists only as a
+            # repo-level secret on the two infra-data repos; using it here would
+            # resolve to empty everywhere else, and npm answers an
+            # unauthenticated private-package request with 404 rather than 401 —
+            # so the failure would surface as a missing package, not a missing
+            # credential.
+            ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
+            npm-token: ${{ secrets.NPM_READ_TOKEN }}
+
+####   End of Stub  ----  Make all edits below this line  #####

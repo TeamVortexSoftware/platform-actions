@@ -1,0 +1,97 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-action.json
+
+# Get a runner from "empty" to "this repo is checked out and its dependencies
+# are installed", ready to run one `vortex:<concern>:all` target.
+#
+# It exists because `repo-verify.yml` runs one job per concern and every one of
+# those jobs needs the identical six steps first. Written out per job that is
+# four copies of the same preamble, which is four places to forget to change.
+#
+# Nothing here is specific to verification. Any shared workflow that needs a
+# platform repo prepared can use it, which is why it is named for the repo
+# rather than for the workflow that happens to be its first caller.
+#
+# The toolchain comes from the repo, never from here: Node from `.nvmrc`, pnpm
+# from `packageManager`. A version pinned in this file would be a second opinion
+# about something the repo has already stated.
+#
+# NO AWS SESSION, deliberately — see repo-verify.yml. A composite action every
+# repo runs is the wrong place to hold a role.
+
+name: Setup vortex repo
+description: Check out a platform repo and install its dependencies, ready to run a vortex:*:all target.
+
+inputs:
+  node-version:
+    description: "Node version. Defaults to the repo's .nvmrc."
+    required: false
+    default: ""
+  submodules:
+    description: "Passed to actions/checkout: 'recursive', 'true' or 'false'."
+    required: false
+    default: "recursive"
+  install-vortex-cli:
+    description: >-
+      Put the vortex CLI on PATH as well. Needed where a target shells out to a
+      bare `vortex`. Opt-in, because installing it costs time in every job that
+      does not need it. Requires npm-token.
+    required: false
+    default: "false"
+  ssh-key:
+    description: >-
+      Deploy/SSH key with read access to any private submodules. Required only
+      when the repo has submodules — .gitmodules on this platform uses SSH URLs,
+      which the default workflow token cannot satisfy.
+    required: false
+    default: ""
+  npm-token:
+    description: >-
+      npm token with read access to the @teamvortexsoftware scope. Required only
+      when the repo installs a package from it, or when install-vortex-cli is on.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v7
+      with:
+        submodules: ${{ inputs.submodules }}
+        ssh-key: ${{ inputs.ssh-key }}
+
+    - name: Setup pnpm
+      # Before setup-node, which needs pnpm on PATH to resolve its cache.
+      # Version comes from the repo's own package.json "packageManager".
+      uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      with:
+        run_install: false
+
+    - name: Setup node
+      uses: actions/setup-node@v7
+      with:
+        # When node-version is empty, setup-node falls back to the file. The
+        # default profile requires .nvmrc, so the fallback always has a target.
+        node-version: ${{ inputs.node-version }}
+        node-version-file: ".nvmrc"
+        cache: pnpm
+
+    - name: Configure npm auth
+      # User-level, never the repo's committed .npmrc: pnpm refuses to expand
+      # ${NPM_TOKEN} from a project .npmrc, and every repo's .npmrc says so.
+      # The token is read from env rather than interpolated into the script.
+      if: ${{ inputs.npm-token != '' }}
+      shell: bash
+      env:
+        NPM_TOKEN: ${{ inputs.npm-token }}
+      run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
+
+    - name: Install
+      shell: bash
+      run: pnpm install --frozen-lockfile
+
+    - name: Setup vortex CLI
+      if: ${{ inputs.install-vortex-cli == 'true' }}
+      uses: TeamVortexSoftware/platform-actions/actions/setup-vortex-cli@main
+      with:
+        npm-token: ${{ inputs.npm-token }}

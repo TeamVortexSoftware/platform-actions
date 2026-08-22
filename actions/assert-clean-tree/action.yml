@@ -1,0 +1,53 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-action.json
+
+# Fail if the working tree changed, and say what that means for the caller.
+#
+# This is the platform's one gate on a `vortex:<concern>:all` target: run it,
+# then require the tree to be as it was. Every concern is held to it, and the
+# only thing that differs between them is why a dirty tree is a problem — which
+# is what `message` carries.
+#
+#   lint      the target modified something; lint is read-only, and mutating
+#             fixes belong in vortex:lint:fix
+#   test      the test battery wrote into the repo; tests must leave no trace
+#   generate  a source was edited without regenerating
+#   build     build output is not gitignored; artifacts are never committed
+#
+# `git add -A` FIRST, then diff the index. `git diff` alone ignores untracked
+# paths, which is exactly how a newly generated file — the most common real
+# drift — would slip through unreported.
+#
+# It stages the tree and leaves it staged. That is fine because the job ends
+# here and the runner is discarded; nothing downstream reads the index.
+
+name: Assert clean tree
+description: Fail when the working tree has changed, reporting the caller's reason and the diff.
+
+inputs:
+  message:
+    description: >-
+      What a dirty tree means for this caller. Shown as the error, so write it
+      for whoever has to fix it.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Working tree is unchanged
+      shell: bash
+      env:
+        MESSAGE: ${{ inputs.message }}
+      run: |
+        set -euo pipefail
+
+        git add -A
+        if git diff --cached --quiet; then
+          echo "Tree is clean."
+          exit 0
+        fi
+
+        echo "::error::${MESSAGE}"
+        git diff --cached --stat
+        echo "---"
+        git diff --cached
+        exit 1
