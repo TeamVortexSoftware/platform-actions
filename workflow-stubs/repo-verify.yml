@@ -1,6 +1,15 @@
 # From the vortex 'repo-verify' workflow template. Install as vtx-repo-verify.yml.
 # See platform-actions/docs/standard-repo-workflows.md
+#
+# MANAGED BY `vortex repo profile apply`. Everything outside a `vtx:keep` block
+# is refreshed from this template on every apply — which is how a change here
+# reaches every repo that installed it. Everything INSIDE a block is yours and is
+# never touched. To stop the file being managed at all, rename it to drop the
+# `vtx-` prefix; you keep a working workflow that is then entirely your own.
+
+# vtx:keep name
 name: "[VTX] Repo Verify"
+# vtx:end
 
 # Leave `pull_request` BARE. With no `types:` it gives the default set — opened,
 # synchronize, reopened — which is what verification wants. Adding
@@ -11,14 +20,20 @@ name: "[VTX] Repo Verify"
 # re-checking after a shared-workflow change lands, or checking a branch that has
 # no PR yet. GitHub only offers it in the UI once this file is on the default
 # branch.
+# vtx:keep triggers
 on:
     pull_request:
     workflow_dispatch:
+# vtx:end
 
 jobs:
     verify:
         # `uses:` cannot take an expression, so this one org is a literal.
         uses: TeamVortexSoftware/platform-actions/.github/workflows/repo-verify.yml@main
+        # vtx:keep inputs
+        # Inputs are yours: run-build, skip-generate-check, install-vortex-cli,
+        # node-version, submodules. Add a `with:` block here if you need one.
+        # vtx:end
         secrets:
             # NPM_READ_TOKEN, not NPM_TOKEN. The read credential is published as
             # an ORG-level Actions secret under that name, so every repo has it
@@ -31,4 +46,7 @@ jobs:
             ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
             npm-token: ${{ secrets.NPM_READ_TOKEN }}
 
-####   End of Stub  ----  Make all edits below this line  #####
+####   Your own jobs and edits go INSIDE the block below.  ####
+####   Anything outside it is replaced on the next apply.  ####
+# vtx:keep extra
+# vtx:end

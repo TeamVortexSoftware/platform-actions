@@ -2,13 +2,14 @@
 
 Every repo on the platform verifies its pull requests the same way: a short stub
 in the repo calls one reusable workflow that holds all the logic. Adopting it is
-a copy-paste plus whatever plumbing the repo's own targets need.
+one command plus whatever plumbing the repo's own targets need.
 
 ### Contents
 
 <!-- vtxmd:toc from-level=2 to-level=2 -->
 * [What you get](#what-you-get)
 * [The stub](#the-stub)
+* [Staying current](#staying-current)
 * [What each target has to satisfy](#what-each-target-has-to-satisfy)
 * [When a target needs the CLI itself](#when-a-target-needs-the-cli-itself)
 * [No AWS session](#no-aws-session)
@@ -49,27 +50,73 @@ expected to be there — `--if-present` is the safety net, not the design.
 
 ## The stub
 
-Copy [`workflow-stubs/repo-verify.yml`](../workflow-stubs/repo-verify.yml) into
-your repo as **`.github/workflows/vtx-repo-verify.yml`**, unedited:
+Install it with the CLI, from the repo that is adopting it:
+
+```bash
+vortex repo gha list                  # what platform-actions offers, and what you have
+vortex repo gha install repo-verify   # writes .github/workflows/vtx-repo-verify.yml
+```
+
+`install` fetches the stub from this repo, so there is one copy of it and no
+paste to get wrong. Commit the result; from then on
+`vortex repo profile apply` keeps it current — see
+[Staying current](#staying-current) below.
+
+What lands is this:
 
 ```yaml
 # From the vortex 'repo-verify' workflow template. Install as vtx-repo-verify.yml.
 # See platform-actions/docs/standard-repo-workflows.md
-name: "[VTX] Repo Verify"
+#
+# MANAGED BY `vortex repo profile apply`. Everything outside a `vtx:keep` block
+# is refreshed from this template on every apply — which is how a change here
+# reaches every repo that installed it. Everything INSIDE a block is yours and is
+# never touched. To stop the file being managed at all, rename it to drop the
+# `vtx-` prefix; you keep a working workflow that is then entirely your own.
 
+# vtx:keep name
+name: "[VTX] Repo Verify"
+# vtx:end
+
+# Leave `pull_request` BARE. With no `types:` it gives the default set — opened,
+# synchronize, reopened — which is what verification wants. Adding
+# `types: [opened]` would mean a PR that fails, gets fixed and is re-pushed never
+# re-verifies, leaving a green tick on a tree that no longer exists.
+#
+# `workflow_dispatch` is for running verification against a branch on demand —
+# re-checking after a shared-workflow change lands, or checking a branch that has
+# no PR yet. GitHub only offers it in the UI once this file is on the default
+# branch.
+# vtx:keep triggers
 on:
     pull_request:
     workflow_dispatch:
+# vtx:end
 
 jobs:
     verify:
         # `uses:` cannot take an expression, so this one org is a literal.
         uses: TeamVortexSoftware/platform-actions/.github/workflows/repo-verify.yml@main
+        # vtx:keep inputs
+        # Inputs are yours: run-build, skip-generate-check, install-vortex-cli,
+        # node-version, submodules. Add a `with:` block here if you need one.
+        # vtx:end
         secrets:
+            # NPM_READ_TOKEN, not NPM_TOKEN. The read credential is published as
+            # an ORG-level Actions secret under that name, so every repo has it
+            # and this stub goes in unedited. NPM_TOKEN exists only as a
+            # repo-level secret on the two infra-data repos; using it here would
+            # resolve to empty everywhere else, and npm answers an
+            # unauthenticated private-package request with 404 rather than 401 —
+            # so the failure would surface as a missing package, not a missing
+            # credential.
             ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
             npm-token: ${{ secrets.NPM_READ_TOKEN }}
 
-####   End of Stub  ----  Make all edits below this line  #####
+####   Your own jobs and edits go INSIDE the block below.  ####
+####   Anything outside it is replaced on the next apply.  ####
+# vtx:keep extra
+# vtx:end
 ```
 
 **The filename and the `name:` are the convention, not a preference.** Every
@@ -78,8 +125,29 @@ shared workflow lands as `vtx-<shared-workflow-name>.yml` with
 its own you can tell at a glance which came from here — in the directory
 listing, the Actions sidebar and the PR check list alike.
 
-Keep the header comment lines and the end-of-stub marker. They cost nothing and
-they are how a file is recognised later as coming from a template.
+## Staying current
+
+`vortex repo profile apply` refreshes every `vtx-*.yml` the repo has. **The
+filename is the record** — a stub is installed if and only if the file is there,
+so nothing tracks adoption separately and there is no state to drift.
+
+What it may rewrite is bounded by markers:
+
+- everything **outside** a `# vtx:keep <name>` … `# vtx:end` block is refreshed
+  from the published stub — which is how a change here reaches every repo that
+  installed it
+- everything **inside** a block is yours and is never touched
+
+Blocks are matched by name, so one the stub later adds arrives with its default
+and one it drops disappears. Unpaired markers abort the run with nothing written
+in any file, rather than guessing where your content ends.
+
+Two ways out, and they differ:
+
+| | |
+| --- | --- |
+| **rename** the file to drop `vtx-` | stops it being managed; you keep a working workflow, now entirely yours |
+| `vortex repo gha delete repo-verify` | removes the workflow |
 
 Both secrets are optional and both resolve to empty when the repo has no such
 secret, which is what lets the stub go in unedited either way.
@@ -218,7 +286,7 @@ jobs:
 2. **Plumb the targets you actually have.** A placeholder is a free pass, so
    plumbing is what makes verification mean anything. Start with
    `vortex:generate:all` — it is the one that catches real drift.
-3. **Install the stub** above, as `.github/workflows/vtx-repo-verify.yml`.
+3. **Install the stub** — `vortex repo gha install repo-verify`.
 4. **Add secrets** if the repo needs them, per the table.
 5. **Open a PR and watch the four checks run.** If one fails on first adoption,
    that is the workflow doing its job — something in the repo was already stale,
@@ -227,7 +295,8 @@ jobs:
 ## Where things live
 
 - The reusable workflow: `platform-actions/.github/workflows/repo-verify.yml`
-- The stub to install: `platform-actions/workflow-stubs/repo-verify.yml`
+- The stub to install: `platform-actions/workflow-stubs/repo-verify.yml` —
+  fetched from here by `vortex repo gha install`, so this is the only copy
 - The composite actions it builds on: `platform-actions/actions/setup-vortex-repo/`
   and `platform-actions/actions/assert-clean-tree/`
 - The target definitions: [script-targets.md](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/script-targets.md)

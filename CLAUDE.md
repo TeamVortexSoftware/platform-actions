@@ -38,10 +38,22 @@ as an input or a secret from the calling repo instead of writing it here.
   rather than in a service repo, because they belong to the platform rather than
   to any one service.
 - **`workflow-stubs/`** — the caller workflow a consuming repo installs, one per
-  shared workflow. Copied in unedited: every value that can be pre-set resolves
-  from an organization-level Actions variable or from the `github` context, so a
-  service repo adopting one configures nothing. Each carries a header comment and
-  an end-of-stub marker so the file stays recognisable as coming from a template.
+  shared workflow. **This is the only copy.** The vortex CLI fetches from here
+  rather than bundling its own, which is why a stub must stay valid on its own:
+  `vortex repo gha install <name>` writes it into a repo, and
+  `vortex repo profile apply` keeps every installed one current.
+
+  Every value that can be pre-set resolves from an organization-level Actions
+  variable or from the `github` context, so a service repo adopting one
+  configures nothing.
+
+  **Editing a stub changes every repo that installed it**, on their next apply —
+  so treat one like the reusable workflow beside it, not like a snippet. What a
+  repo may change is fenced by `# vtx:keep <name>` … `# vtx:end` blocks: inside a
+  block is the repo's and is never touched, everything outside is refreshed.
+  Marking the *exclusions* rather than the inclusions is what lets a stub gain a
+  key later and have it reach copies already out; mark the inclusions instead and
+  every installed file is frozen in the shape it had at install time.
 
   **A stub lands under a fixed name**: `.github/workflows/vtx-<shared-workflow-name>.yml`,
   with `name: "[VTX] <Title Case Name>"`. So `repo-verify.yml` installs as
