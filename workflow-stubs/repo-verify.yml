@@ -1,0 +1,22 @@
+# From the vortex 'repo-verify' workflow template. Install as vtx-repo-verify.yml.
+# See platform-actions/docs/standard-repo-workflows.md
+name: "[VTX] Repo Verify"
+
+# Leave this trigger BARE. `on: pull_request` with no `types:` gives the default
+# set — opened, synchronize, reopened — which is what verification wants. Adding
+# `types: [opened]` would mean a PR that fails, gets fixed and is re-pushed never
+# re-verifies, leaving a green tick on a tree that no longer exists.
+on:
+    pull_request:
+
+jobs:
+    verify:
+        # `uses:` cannot take an expression, so this one org is a literal.
+        uses: TeamVortexSoftware/platform-actions/.github/workflows/repo-verify.yml@main
+        secrets:
+            # Both resolve to empty when the repo has no such secret, and both
+            # are optional — so this stub is copied in unedited either way.
+            ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
+            npm-token: ${{ secrets.NPM_TOKEN }}
+
+####   End of Stub  ----  Make all edits below this line  #####

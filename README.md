@@ -31,6 +31,25 @@ from an organization-level Actions variable — and each carries a header commen
 and an end-of-stub marker so the file is recognisable later as coming from a
 template.
 
+### How a stub is named where it lands
+
+A consuming repo installs a stub under a fixed name, so that every shared
+workflow is recognisable as one at a glance:
+
+| | |
+| --- | --- |
+| file | `.github/workflows/vtx-<shared-workflow-name>.yml` |
+| `name:` | `[VTX] <Title Case Name>` |
+
+So `repo-verify.yml` is installed as `vtx-repo-verify.yml`, named
+`[VTX] Repo Verify`.
+
+The `vtx-` prefix sorts every shared workflow together in the directory listing
+and in the Actions sidebar; the `[VTX]` display prefix does the same on a pull
+request's check list. In a service repo carrying forty workflows of its own,
+that is the difference between "which of these are ours" being obvious and
+being a question.
+
 **This repository is public.** Keep organization names, domains, secret paths,
 account aliases and role names out of these files; pass them in from the calling
 repo. See `CLAUDE.md`.
