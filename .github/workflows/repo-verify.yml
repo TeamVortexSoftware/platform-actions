@@ -107,7 +107,7 @@ jobs:
       # Referenced by owner/repo/path@ref rather than ./actions/… — a relative
       # `uses:` inside a reusable workflow resolves against the CALLER's
       # checkout, not this repository's, so the local form would not exist.
-      - uses: TeamVortexSoftware/platform-actions/actions/setup-vortex-repo@feature/ops-747
+      - uses: TeamVortexSoftware/platform-actions/actions/setup-vortex-repo@main
         with:
           node-version: ${{ inputs.node-version }}
           submodules: ${{ inputs.submodules }}
@@ -118,7 +118,7 @@ jobs:
       - name: vortex:lint:all
         run: pnpm run --if-present vortex:lint:all
 
-      - uses: TeamVortexSoftware/platform-actions/actions/assert-clean-tree@feature/ops-747
+      - uses: TeamVortexSoftware/platform-actions/actions/assert-clean-tree@main
         with:
           message: >-
             vortex:lint:all modified the tree. lint is a read-only concern —
@@ -127,7 +127,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: TeamVortexSoftware/platform-actions/actions/setup-vortex-repo@feature/ops-747
+      - uses: TeamVortexSoftware/platform-actions/actions/setup-vortex-repo@main
         with:
           node-version: ${{ inputs.node-version }}
           submodules: ${{ inputs.submodules }}
@@ -138,7 +138,7 @@ jobs:
       - name: vortex:test:all
         run: pnpm run --if-present vortex:test:all
 
-      - uses: TeamVortexSoftware/platform-actions/actions/assert-clean-tree@feature/ops-747
+      - uses: TeamVortexSoftware/platform-actions/actions/assert-clean-tree@main
         with:
           message: >-
             vortex:test:all wrote into the repo. The test battery must leave no
@@ -148,7 +148,7 @@ jobs:
     if: ${{ !inputs.skip-generate-check }}
     runs-on: ubuntu-latest
     steps:
-      - uses: TeamVortexSoftware/platform-actions/actions/setup-vortex-repo@feature/ops-747
+      - uses: TeamVortexSoftware/platform-actions/actions/setup-vortex-repo@main
         with:
           node-version: ${{ inputs.node-version }}
           submodules: ${{ inputs.submodules }}
@@ -159,7 +159,7 @@ jobs:
       - name: vortex:generate:all
         run: pnpm run --if-present vortex:generate:all
 
-      - uses: TeamVortexSoftware/platform-actions/actions/assert-clean-tree@feature/ops-747
+      - uses: TeamVortexSoftware/platform-actions/actions/assert-clean-tree@main
         with:
           message: >-
             vortex:generate:all changed files — a source was edited without
@@ -169,7 +169,7 @@ jobs:
     if: ${{ inputs.run-build }}
     runs-on: ubuntu-latest
     steps:
-      - uses: TeamVortexSoftware/platform-actions/actions/setup-vortex-repo@feature/ops-747
+      - uses: TeamVortexSoftware/platform-actions/actions/setup-vortex-repo@main
         with:
           node-version: ${{ inputs.node-version }}
           submodules: ${{ inputs.submodules }}
@@ -180,7 +180,7 @@ jobs:
       - name: vortex:build:all
         run: pnpm run --if-present vortex:build:all
 
-      - uses: TeamVortexSoftware/platform-actions/actions/assert-clean-tree@feature/ops-747
+      - uses: TeamVortexSoftware/platform-actions/actions/assert-clean-tree@main
         with:
           message: >-
             vortex:build:all left files in the tree. Build output is never
