@@ -59,6 +59,7 @@ name: "[VTX] Repo Verify"
 
 on:
     pull_request:
+    workflow_dispatch:
 
 jobs:
     verify:
@@ -89,6 +90,12 @@ secret, which is what lets the stub go in unedited either way.
 re-verifies, leaving a green tick on a tree that no longer exists. That trap is
 live elsewhere on the platform; see
 [platform-gotchas.md](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/platform-gotchas.md).
+
+**`workflow_dispatch` runs verification on demand**, against a branch you pick —
+useful for re-checking a branch after a change to the shared workflow lands, or
+for checking one that has no PR open yet. GitHub only surfaces the "Run workflow"
+button once the file is on the repo's default branch, so it will not appear on
+the PR that first installs the stub.
 
 `@main` is deliberate: consumers track the workflow as it moves. Pin to a tag
 only if a repo needs to lag behind on purpose.

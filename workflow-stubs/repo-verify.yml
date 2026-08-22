@@ -2,12 +2,18 @@
 # See platform-actions/docs/standard-repo-workflows.md
 name: "[VTX] Repo Verify"
 
-# Leave this trigger BARE. `on: pull_request` with no `types:` gives the default
-# set — opened, synchronize, reopened — which is what verification wants. Adding
+# Leave `pull_request` BARE. With no `types:` it gives the default set — opened,
+# synchronize, reopened — which is what verification wants. Adding
 # `types: [opened]` would mean a PR that fails, gets fixed and is re-pushed never
 # re-verifies, leaving a green tick on a tree that no longer exists.
+#
+# `workflow_dispatch` is for running verification against a branch on demand —
+# re-checking after a shared-workflow change lands, or checking a branch that has
+# no PR yet. GitHub only offers it in the UI once this file is on the default
+# branch.
 on:
     pull_request:
+    workflow_dispatch:
 
 jobs:
     verify:
