@@ -86,3 +86,20 @@ input.
 - Pin third-party actions by commit SHA with a version comment, as
   `repo-verify.yml` does for `pnpm/action-setup`. First-party `actions/*` are
   pinned by major tag.
+
+## A reusable workflow cannot reach its own repo relatively
+
+A reusable workflow here refers to this repo's composite actions by full
+`TeamVortexSoftware/platform-actions/actions/<name>@main`, never `./actions/<name>`.
+A relative `uses:` resolves against the **caller's** checkout, not this
+repository's, so the local form simply is not there.
+
+The consequence bites on a feature branch: **a change that adds a composite
+action and calls it from a reusable workflow in the same commit cannot be
+verified before merge.** The workflow is read from your branch, but its `@main`
+action references resolve against `main`, where the new action does not exist
+yet — every job fails with `Can't find 'action.yml' … for action …@main`.
+
+To prove such a change, temporarily point both the consuming repo's stub *and*
+the workflow's own `uses:` lines at the feature ref, then revert both before
+merge. Repointing only the stub is not enough.
