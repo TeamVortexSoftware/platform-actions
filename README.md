@@ -25,11 +25,22 @@ docs hub.
 
 ## Workflow stubs
 
-`workflow-stubs/` holds the caller workflow each consuming repo installs. They
-are meant to be copied in **unedited** — every value that can be pre-set comes
-from an organization-level Actions variable — and each carries a header comment
-and an end-of-stub marker so the file is recognisable later as coming from a
-template.
+`workflow-stubs/` holds the caller workflow each consuming repo installs. This is
+the **only** copy — the vortex CLI fetches them from here rather than bundling
+its own, so there is nothing to keep in step:
+
+```bash
+vortex repo gha list                  # what is on offer, and what a repo has
+vortex repo gha install repo-verify   # writes .github/workflows/vtx-repo-verify.yml
+vortex repo profile apply             # keeps every installed stub current
+```
+
+Every value that can be pre-set comes from an organization-level Actions
+variable, so a stub goes in unedited. What a repo may change is fenced by
+`# vtx:keep <name>` … `# vtx:end` blocks: content inside a block is the repo's
+and is never touched, everything outside it is refreshed on every apply. That
+polarity is deliberate — it is what lets a stub gain a key later and have it
+reach every installed copy.
 
 ### How a stub is named where it lands
 
