@@ -20,9 +20,15 @@ jobs:
         # `uses:` cannot take an expression, so this one org is a literal.
         uses: TeamVortexSoftware/platform-actions/.github/workflows/repo-verify.yml@main
         secrets:
-            # Both resolve to empty when the repo has no such secret, and both
-            # are optional — so this stub is copied in unedited either way.
+            # NPM_READ_TOKEN, not NPM_TOKEN. The read credential is published as
+            # an ORG-level Actions secret under that name, so every repo has it
+            # and this stub goes in unedited. NPM_TOKEN exists only as a
+            # repo-level secret on the two infra-data repos; using it here would
+            # resolve to empty everywhere else, and npm answers an
+            # unauthenticated private-package request with 404 rather than 401 —
+            # so the failure would surface as a missing package, not a missing
+            # credential.
             ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
-            npm-token: ${{ secrets.NPM_TOKEN }}
+            npm-token: ${{ secrets.NPM_READ_TOKEN }}
 
 ####   End of Stub  ----  Make all edits below this line  #####

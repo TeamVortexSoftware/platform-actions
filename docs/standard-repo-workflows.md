@@ -67,7 +67,7 @@ jobs:
         uses: TeamVortexSoftware/platform-actions/.github/workflows/repo-verify.yml@main
         secrets:
             ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
-            npm-token: ${{ secrets.NPM_TOKEN }}
+            npm-token: ${{ secrets.NPM_READ_TOKEN }}
 
 ####   End of Stub  ----  Make all edits below this line  #####
 ```
@@ -83,6 +83,13 @@ they are how a file is recognised later as coming from a template.
 
 Both secrets are optional and both resolve to empty when the repo has no such
 secret, which is what lets the stub go in unedited either way.
+
+**It is `NPM_READ_TOKEN`, not `NPM_TOKEN`.** The read credential is published as
+an org-level Actions secret under that name, so every repo in the org has it.
+Getting this wrong is quiet rather than loud: the token resolves to an empty
+string, npm answers an unauthenticated private-package request with **404 rather
+than 401**, and the run fails with `ERR_PNPM_FETCH_404` on a package that plainly
+exists.
 
 **Leave `on: pull_request` bare.** That gives the default trigger set —
 `opened`, `synchronize`, `reopened` — which is what verification wants. Adding
@@ -187,7 +194,7 @@ All optional.
 | Secret      | Required when                                                                                                                                                                        |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `ssh-key`   | The repo has submodules. `.gitmodules` uses SSH URLs here, which the default workflow token cannot satisfy — without a key, checkout silently produces an empty submodule directory. |
-| `npm-token` | The repo installs a package from the `@teamvortexsoftware` scope. Written to the runner's user-level `~/.npmrc`, never the repo's committed one.                                     |
+| `npm-token` | The repo installs a package from the `@teamvortexsoftware` scope. Pass `secrets.NPM_READ_TOKEN` — the read credential is an **org-level** Actions secret under that name, so every repo has it. `NPM_TOKEN` is a repo-level secret on the two `infra-data` repos only. Written to the runner's user-level `~/.npmrc`, never the repo's committed one. |
 
 The stub already passes both secrets. An input is added below the job's `uses:`
 line:
@@ -200,7 +207,7 @@ jobs:
             run-build: true
         secrets:
             ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
-            npm-token: ${{ secrets.NPM_TOKEN }}
+            npm-token: ${{ secrets.NPM_READ_TOKEN }}
 ```
 
 ## Adopting it in a repo
