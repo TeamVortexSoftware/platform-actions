@@ -1,7 +1,21 @@
-# From the vortex 'promote-repo' workflow template must be installed as vtx-promote-repo.yml'.
+# From the vortex 'promote-repo' workflow template. Install as vtx-promote-repo.yml.
 # See platform-actions/docs/promoting-to-production.md
-name: "[VTX] Promote Repo (dev develop → dev main → prod main)"
+#
+# MANAGED BY `vortex repo gha update`. Everything outside a `vtx:keep` block
+# is refreshed from this template on every update — which is how a change here
+# reaches every repo that installed it. Everything INSIDE a block is yours and is
+# never touched. To stop the file being managed at all, rename it to drop the
+# `vtx-` prefix; you keep a working workflow that is then entirely your own.
 
+# The name carries the progression deliberately. This is a workflow_dispatch —
+# someone picks it out of the Actions sidebar and clicks Run — and the branch
+# flow is the one thing that says which promotion they are about to fire. A repo
+# configured for a different flow should say so here.
+# vtx:keep name
+name: "[VTX] Promote Repo (dev develop → dev main → prod main)"
+# vtx:end
+
+# vtx:keep triggers
 on:
     workflow_dispatch:
         inputs:
@@ -10,6 +24,7 @@ on:
                 type: string
                 required: false
                 default: ""
+# vtx:end
 
 jobs:
     promote-repo:
@@ -18,6 +33,18 @@ jobs:
         # `uses:` cannot take an expression, so this one org is a literal.
         uses: TeamVortexSoftware/platform-actions/.github/workflows/promote-repo.yml@main
         with:
+            deployment-log-description: ${{ inputs.description }}
+            commit-author: ${{ vars.VTX_INFRA_PROD_COMMIT_AUTHOR }}
+            committer-name: ${{ vars.VTX_INFRA_PROD_BOT_USER }}
+            committer-email: ${{ vars.VTX_INFRA_PROD_BOT_USER }}@users.noreply.github.com
+            # Below is this repo's promotion: which repos it crosses, which
+            # branches it moves between, where the log lives, and whether LFS
+            # objects are mirrored. The defaults are the standard dual-repo flow,
+            # read from org vars so they need no editing in the common case —
+            # but they are yours, and an update leaves them as you set them.
+            # A different progression is configured here, not by installing a
+            # different stub.
+            # vtx:keep inputs
             dev-owner: ${{ vars.VTX_INFRA_DEV_GH_ORG }}
             dev-repo: ${{ github.event.repository.name }}
             prod-owner: ${{ vars.VTX_INFRA_PROD_GH_ORG }}
@@ -25,12 +52,12 @@ jobs:
             source-branch: develop
             target-branch: main
             deployment-log-path: REPO_DEPLOYMENT_LOG.md
-            deployment-log-description: ${{ inputs.description }}
-            commit-author: ${{ vars.VTX_INFRA_PROD_COMMIT_AUTHOR }}
-            committer-name: ${{ vars.VTX_INFRA_PROD_BOT_USER }}
-            committer-email: ${{ vars.VTX_INFRA_PROD_BOT_USER }}@users.noreply.github.com
             lfs: false
+            # vtx:end
         secrets:
             bot-token: ${{ secrets.VTX_INFRA_PROD_BOT_PAT }}
 
-####   End of Stub  ----  Make all edits below this line  #####
+####   Your own jobs and edits go INSIDE the block below.  ####
+####   Anything outside it is replaced on the next update.  ####
+# vtx:keep extra
+# vtx:end

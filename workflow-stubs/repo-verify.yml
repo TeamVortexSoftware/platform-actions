@@ -47,6 +47,6 @@ jobs:
             npm-token: ${{ secrets.NPM_READ_TOKEN }}
 
 ####   Your own jobs and edits go INSIDE the block below.  ####
-####   Anything outside it is replaced on the next apply.  ####
+####   Anything outside it is replaced on the next update.  ####
 # vtx:keep extra
 # vtx:end

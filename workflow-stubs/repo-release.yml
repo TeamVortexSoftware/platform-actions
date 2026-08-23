@@ -1,7 +1,17 @@
-# From the vortex 'repo-release' workflow template must be installed as vtx-release.yml'.
+# From the vortex 'repo-release' workflow template. Install as vtx-repo-release.yml.
 # See platform-actions/docs/releasing-binaries.md
-name: "[VTX] Release binaries"
+#
+# MANAGED BY `vortex repo gha update`. Everything outside a `vtx:keep` block
+# is refreshed from this template on every update — which is how a change here
+# reaches every repo that installed it. Everything INSIDE a block is yours and is
+# never touched. To stop the file being managed at all, rename it to drop the
+# `vtx-` prefix; you keep a working workflow that is then entirely your own.
 
+# vtx:keep name
+name: "[VTX] Release Artifacts"
+# vtx:end
+
+# vtx:keep triggers
 on:
     workflow_dispatch:
         inputs:
@@ -13,6 +23,7 @@ on:
                 description: "Tag to release from. Must already exist."
                 type: string
                 required: true
+# vtx:end
 
 # The called workflow creates a Release and pushes to a tap, and a called
 # workflow can hold no more permission than its caller grants. The repo default
@@ -27,18 +38,24 @@ jobs:
         with:
             version: ${{ inputs.version }}
             tag: ${{ inputs.tag }}
-            # The four values below are the only per-repo ones: what to build,
-            # where the artifacts land, and which one the formula points at.
-            # A repo that ships binaries but no formula clears tap-repo,
-            # formula-path and asset-pattern and keeps the rest.
+            # The values below are the only per-repo ones: what to build, where
+            # the artifacts land, and which formula points at which asset. They
+            # are yours — an update leaves them exactly as you set them. A repo
+            # that ships artifacts but no formula clears tap-repo, formula-path
+            # and asset-pattern and keeps the rest.
+            # vtx:keep inputs
             targets: '["darwin-arm64"]'
             artifact-glob: "dist-binary/*.tar.gz*"
             tap-repo: ${{ vars.VTX_HOMEBREW_TAP }}
             formula-path: Formula/CHANGE_ME.rb
             asset-pattern: "*-darwin-arm64.tar.gz"
+            # vtx:end
         secrets:
             tap-token: ${{ secrets.VTX_HOMEBREW_TAP_PAT }}
             npm-token: ${{ secrets.NPM_TOKEN }}
             ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-####   End of Stub  ----  Make all edits below this line  #####
+####   Your own jobs and edits go INSIDE the block below.  ####
+####   Anything outside it is replaced on the next update.  ####
+# vtx:keep extra
+# vtx:end
