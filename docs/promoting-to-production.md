@@ -40,10 +40,21 @@ production repo triggers deployments.
 
 ## Installing it
 
-Copy [the promote-repo.yml stub](../workflow-stubs/promote-repo.yml) into the service repo as
-`.github/workflows/vtx-promote-repo.yml`. Nothing to fill in — every value
-resolves from an organization-level Actions variable or from the event. Keep the
-stub portion intact; the `name` is yours to change.
+Install it with the CLI, from the repo that is adopting it:
+
+```bash
+vortex repo gha install promote-repo   # writes .github/workflows/vtx-promote-repo.yml
+```
+
+Nothing to fill in — every value resolves from an organization-level Actions
+variable or from the event.
+
+`vortex repo gha update` keeps it current afterwards. Everything outside a
+`# vtx:keep <name>` … `# vtx:end` block is refreshed from the published stub;
+everything inside is yours. The `name` and the promotion itself — which repos it
+crosses, which branches it moves between, the log path, whether LFS objects are
+mirrored — sit inside blocks, so a repo on a different progression configures it
+here rather than installing a different stub.
 
 Dispatching takes one optional note for the deployment log, defaulting to a
 timestamp.
@@ -86,4 +97,5 @@ timestamp.
 ## Where things live
 
 - The reusable workflow: `platform-actions/.github/workflows/promote-repo.yml`
-- The stub to install: `platform-actions/workflow-stubs/promote-repo.yml`
+- The stub to install: `platform-actions/workflow-stubs/promote-repo.yml` —
+  fetched from here by `vortex repo gha install`, so this is the only copy

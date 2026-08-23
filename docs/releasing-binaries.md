@@ -17,6 +17,7 @@ rather than copying it.
 * [Inputs and secrets](#inputs-and-secrets)
 * [Nothing private is hardcoded here](#nothing-private-is-hardcoded-here)
 * [Gotcha: a stale Homebrew cache hides download failures](#gotcha-a-stale-homebrew-cache-hides-download-failures)
+* [Installing it](#installing-it)
 * [Where things live](#where-things-live)
 <!-- vtxmd:end -->
 
@@ -121,8 +122,25 @@ Verifying an install by hand proves nothing if brew still holds the artifact fro
 an earlier successful fetch — it will install happily with no credentials at all.
 Remove `brew --cache <formula>` first, or the check is theatre.
 
+## Installing it
+
+Install it with the CLI, from the repo that is adopting it:
+
+```bash
+vortex repo gha install repo-release   # writes .github/workflows/vtx-repo-release.yml
+```
+
+Then set the per-repo values — `targets`, `artifact-glob`, `tap-repo`,
+`formula-path`, `asset-pattern`. They sit inside the stub's `# vtx:keep inputs`
+block, which is what makes them survive `vortex repo gha update`: everything
+outside a block is refreshed from the published stub, everything inside is
+yours. A repo that ships artifacts but no formula clears `tap-repo`,
+`formula-path` and `asset-pattern` and keeps the rest.
+
 ## Where things live
 
 - The reusable workflow: `platform-actions/.github/workflows/repo-release.yml`
+- The stub to install: `platform-actions/workflow-stubs/repo-release.yml` —
+  fetched from here by `vortex repo gha install`, so this is the only copy
 - The target definitions: [script-targets.md](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/script-targets.md)
 - PR verification, the sibling workflow: [standard-repo-workflows.md](standard-repo-workflows.md)
