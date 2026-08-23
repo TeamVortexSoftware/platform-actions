@@ -59,7 +59,7 @@ vortex repo gha install repo-verify   # writes .github/workflows/vtx-repo-verify
 
 `install` fetches the stub from this repo, so there is one copy of it and no
 paste to get wrong. Commit the result; from then on
-`vortex repo profile apply` keeps it current — see
+`vortex repo gha update` keeps it current — see
 [Staying current](#staying-current) below.
 
 What lands is this:
@@ -68,8 +68,8 @@ What lands is this:
 # From the vortex 'repo-verify' workflow template. Install as vtx-repo-verify.yml.
 # See platform-actions/docs/standard-repo-workflows.md
 #
-# MANAGED BY `vortex repo profile apply`. Everything outside a `vtx:keep` block
-# is refreshed from this template on every apply — which is how a change here
+# MANAGED BY `vortex repo gha update`. Everything outside a `vtx:keep` block
+# is refreshed from this template on every update — which is how a change here
 # reaches every repo that installed it. Everything INSIDE a block is yours and is
 # never touched. To stop the file being managed at all, rename it to drop the
 # `vtx-` prefix; you keep a working workflow that is then entirely your own.
@@ -127,9 +127,14 @@ listing, the Actions sidebar and the PR check list alike.
 
 ## Staying current
 
-`vortex repo profile apply` refreshes every `vtx-*.yml` the repo has. **The
+`vortex repo gha update` refreshes every `vtx-*.yml` the repo has. **The
 filename is the record** — a stub is installed if and only if the file is there,
 so nothing tracks adoption separately and there is no state to drift.
+
+A stub is not a profile member, and `vortex repo profile apply` does not touch
+one. That command deploys files bundled inside the CLI; a stub is fetched from
+this repo. The whole stub lifecycle — `install`, `update`, `delete` — is the
+`gha` family.
 
 What it may rewrite is bounded by markers:
 

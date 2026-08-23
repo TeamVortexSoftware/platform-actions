@@ -1,8 +1,8 @@
 # From the vortex 'repo-verify' workflow template. Install as vtx-repo-verify.yml.
 # See platform-actions/docs/standard-repo-workflows.md
 #
-# MANAGED BY `vortex repo profile apply`. Everything outside a `vtx:keep` block
-# is refreshed from this template on every apply — which is how a change here
+# MANAGED BY `vortex repo gha update`. Everything outside a `vtx:keep` block
+# is refreshed from this template on every update — which is how a change here
 # reaches every repo that installed it. Everything INSIDE a block is yours and is
 # never touched. To stop the file being managed at all, rename it to drop the
 # `vtx-` prefix; you keep a working workflow that is then entirely your own.
