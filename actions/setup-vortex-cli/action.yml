@@ -65,7 +65,12 @@ runs:
         # from a committed one, and every repo's .npmrc says so.
         echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
 
-        npm install -g "${PACKAGE}@latest"
+        # pnpm, not npm. The package's own preinstall is `npx only-allow pnpm`
+        # — a guard meant for people working in its source repo, which ships in
+        # the published package and rejects `npm install -g` with exit 254. pnpm
+        # is also the channel the platform documents for a global install, so
+        # this is the supported path rather than a way around the guard.
+        pnpm add -g "${PACKAGE}@latest"
 
         # Assert rather than assume. A global install that lands somewhere off
         # PATH exits 0 and leaves the next step failing on "command not found",
