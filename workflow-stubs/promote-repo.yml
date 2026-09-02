@@ -7,6 +7,12 @@
 # never touched. To stop the file being managed at all, rename it to drop the
 # `vtx-` prefix; you keep a working workflow that is then entirely your own.
 
+# vtx:requires none
+#
+# This workflow moves branches between repositories and runs nothing from the
+# repo's package.json. `none` is written out rather than left blank so a reader
+# can tell it was decided rather than forgotten.
+
 # The name carries the progression deliberately. This is a workflow_dispatch —
 # someone picks it out of the Actions sidebar and clicks Run — and the branch
 # flow is the one thing that says which promotion they are about to fire. A repo
