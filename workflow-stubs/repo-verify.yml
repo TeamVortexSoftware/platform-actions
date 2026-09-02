@@ -20,6 +20,7 @@ name: "[VTX] Repo Verify"
 # re-checking after a shared-workflow change lands, or checking a branch that has
 # no PR yet. GitHub only offers it in the UI once this file is on the default
 # branch.
+
 # vtx:keep triggers
 on:
     pull_request:
@@ -30,23 +31,93 @@ jobs:
     verify:
         # `uses:` cannot take an expression, so this one org is a literal.
         uses: TeamVortexSoftware/platform-actions/.github/workflows/repo-verify.yml@main
+
+        # =====================================================================
+        # SETTINGS — what each one does, and the value you get if you leave it
+        # out. This list is refreshed on every `vortex repo gha update`, so it
+        # always describes the workflow you are actually calling. Your chosen
+        # values live in the block below it and are never overwritten.
+        #
+        # Four jobs run against your repo, each running the matching
+        # `vortex:<name>:all` script from your package.json. There is one setting
+        # per job, named to match. Set it to true and that job does not run.
+        #
+        #   skip-lint            default false
+        #       Runs `vortex:lint:all`.
+        #
+        #   skip-test            default false
+        #       Runs `vortex:test:all`, then fails if the run left any file
+        #       changed. A test battery is supposed to leave no trace — write to
+        #       a temp directory, or add the output to .gitignore.
+        #
+        #   skip-generate        default false
+        #       Runs `vortex:generate:all`, then fails if any file changed. That
+        #       catches the case where someone edited a source file and forgot to
+        #       re-run the generator. Skip it only while adopting this workflow in
+        #       a repo whose generators are not yet trustworthy — it is meant to
+        #       go back to false.
+        #
+        #   skip-build           default TRUE
+        #       Runs `vortex:build:all`, then fails if any file changed. Build
+        #       output is never committed, so anything left behind means
+        #       something is missing from .gitignore. This is the one job not
+        #       worth running everywhere, which is why it is the one skipped by
+        #       default. Turn it on where a PR should prove the thing still
+        #       builds; leave it off in a repo that does not build anything.
+        #
+        #   node-version         default ""
+        #       Empty means "read it from this repo's .nvmrc", which is what you
+        #       almost certainly want. Put a version string here to override that.
+        #
+        #   submodules           default "recursive"
+        #       What to check out alongside your repo. "recursive" also gets
+        #       submodules, and submodules inside those. Use "false" for a faster
+        #       checkout in a repo with no submodules; "true" gets the top level
+        #       of submodules only.
+        # =====================================================================
+
         # vtx:keep inputs
-        # Inputs are yours: run-build, skip-generate-check, install-vortex-cli,
-        # node-version, submodules. Add a `with:` block here if you need one.
+        with:
+            skip-lint: false
+            skip-test: false
+            skip-generate: false
+            skip-build: true
+            node-version: ""
+            submodules: "recursive"
         # vtx:end
+
+        # =====================================================================
+        # SECRETS — both are organization-level, so they already exist for every
+        # repo and you do not have to create them. Passing one your repo does not
+        # need is harmless.
+        #
+        #   ssh-key
+        #       Needed if your repo has submodules. Our .gitmodules files use SSH
+        #       addresses, and the token GitHub hands a workflow by default
+        #       cannot read those, so checkout needs this key instead.
+        #
+        #   npm-token
+        #       Needed if your repo installs any @teamvortexsoftware package, and
+        #       whenever the vortex CLI itself has to be fetched — which happens
+        #       automatically when the repo does not carry it as a dependency.
+        #
+        #       Note the name: NPM_READ_TOKEN, not NPM_TOKEN. NPM_READ_TOKEN is
+        #       the organization-level one that every repo has. NPM_TOKEN exists
+        #       only on two repos, so naming it here would quietly resolve to
+        #       nothing everywhere else — and npm answers an unauthenticated
+        #       request for a private package with "not found" rather than "not
+        #       allowed", so the failure would look like a missing package rather
+        #       than a missing credential.
+        # =====================================================================
+
+        # vtx:keep secrets
         secrets:
-            # NPM_READ_TOKEN, not NPM_TOKEN. The read credential is published as
-            # an ORG-level Actions secret under that name, so every repo has it
-            # and this stub goes in unedited. NPM_TOKEN exists only as a
-            # repo-level secret on the two infra-data repos; using it here would
-            # resolve to empty everywhere else, and npm answers an
-            # unauthenticated private-package request with 404 rather than 401 —
-            # so the failure would surface as a missing package, not a missing
-            # credential.
             ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
             npm-token: ${{ secrets.NPM_READ_TOKEN }}
+        # vtx:end
 
 ####   Your own jobs and edits go INSIDE the block below.  ####
 ####   Anything outside it is replaced on the next update.  ####
+
 # vtx:keep extra
 # vtx:end
