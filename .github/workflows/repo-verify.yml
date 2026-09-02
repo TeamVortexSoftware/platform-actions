@@ -13,7 +13,12 @@
 #   lint      vortex:lint:all
 #   test      vortex:test:all
 #   generate  vortex:generate:all
-#   build     vortex:build:all      (opt-in)
+#   build     vortex:build:all
+#
+# ONE SETTING PER JOB, named for it: skip-lint, skip-test, skip-generate,
+# skip-build. Same direction every time — true means the job does not run. Three
+# default to false and `skip-build` defaults to true, because build is the one
+# job most repos do not want; the odd one out is the default, never the name.
 #
 # They are separate jobs rather than four steps of one so that a single run
 # reports everything that is wrong. Sequentially, a lint failure ends the run
@@ -39,6 +44,12 @@
 # as a runnable `echo` placeholder for the repo's keeper to fill in, so the
 # targets are expected to exist; --if-present is the safety net, not the design.
 #
+# The vortex CLI is supplied automatically. A target may shell out to a bare
+# `vortex` — vortex:generate:all in the infra repos does — and setup-vortex-repo
+# installs the CLI when the repo does not carry it as a dependency. There is no
+# setting for it: a caller had to remember to ask before, and forgetting produced
+# a failure with nothing to point at.
+#
 # No AWS credentials are configured here, by design. If a repo's target needs
 # the vault, that is for the repo to solve inside its own target — a shared
 # workflow every repo calls is the wrong place to hold a role.
@@ -57,29 +68,32 @@ on:
         type: string
         required: false
         default: "recursive"
-      skip-generate-check:
-        description: >-
-          Skip the generate job entirely. For a repo adopting the workflow
-          before its generators are honest — not a permanent state.
+      skip-lint:
+        description: "Skip the lint job, which runs vortex:lint:all."
         type: boolean
         required: false
         default: false
-      run-build:
-        description: >-
-          Also run the build job. Opt-in: worth it where a PR should prove the
-          artifact still builds, noise where nothing is built.
+      skip-test:
+        description: "Skip the test job, which runs vortex:test:all."
         type: boolean
         required: false
         default: false
-      install-vortex-cli:
+      skip-generate:
         description: >-
-          Put the vortex CLI on PATH before running the targets. Needed where a
-          target shells out to a bare `vortex` — vortex:generate:all in the infra
-          repos does. Opt-in, because installing it costs time in every repo that
-          does not need it. Requires npm-token.
+          Skip the generate job, which runs vortex:generate:all. For a repo
+          adopting the workflow before its generators are honest — not a
+          permanent state.
         type: boolean
         required: false
         default: false
+      skip-build:
+        description: >-
+          Skip the build job, which runs vortex:build:all. Skipped by default:
+          worth running where a PR should prove the artifact still builds, noise
+          where nothing is built. This is the one job most repos do not want.
+        type: boolean
+        required: false
+        default: true
     secrets:
       ssh-key:
         description: >-
@@ -102,6 +116,7 @@ defaults:
 
 jobs:
   lint:
+    if: ${{ !inputs.skip-lint }}
     runs-on: ubuntu-latest
     steps:
       # Referenced by owner/repo/path@ref rather than ./actions/… — a relative
@@ -111,7 +126,6 @@ jobs:
         with:
           node-version: ${{ inputs.node-version }}
           submodules: ${{ inputs.submodules }}
-          install-vortex-cli: ${{ inputs.install-vortex-cli }}
           ssh-key: ${{ secrets.ssh-key }}
           npm-token: ${{ secrets.npm-token }}
 
@@ -125,13 +139,13 @@ jobs:
             put mutating fixes in vortex:lint:fix instead.
 
   test:
+    if: ${{ !inputs.skip-test }}
     runs-on: ubuntu-latest
     steps:
       - uses: TeamVortexSoftware/platform-actions/actions/setup-vortex-repo@main
         with:
           node-version: ${{ inputs.node-version }}
           submodules: ${{ inputs.submodules }}
-          install-vortex-cli: ${{ inputs.install-vortex-cli }}
           ssh-key: ${{ secrets.ssh-key }}
           npm-token: ${{ secrets.npm-token }}
 
@@ -145,14 +159,13 @@ jobs:
             trace — write to a temp dir, or gitignore the output.
 
   generate:
-    if: ${{ !inputs.skip-generate-check }}
+    if: ${{ !inputs.skip-generate }}
     runs-on: ubuntu-latest
     steps:
       - uses: TeamVortexSoftware/platform-actions/actions/setup-vortex-repo@main
         with:
           node-version: ${{ inputs.node-version }}
           submodules: ${{ inputs.submodules }}
-          install-vortex-cli: ${{ inputs.install-vortex-cli }}
           ssh-key: ${{ secrets.ssh-key }}
           npm-token: ${{ secrets.npm-token }}
 
@@ -166,14 +179,13 @@ jobs:
             regenerating. Run it locally and commit the result.
 
   build:
-    if: ${{ inputs.run-build }}
+    if: ${{ !inputs.skip-build }}
     runs-on: ubuntu-latest
     steps:
       - uses: TeamVortexSoftware/platform-actions/actions/setup-vortex-repo@main
         with:
           node-version: ${{ inputs.node-version }}
           submodules: ${{ inputs.submodules }}
-          install-vortex-cli: ${{ inputs.install-vortex-cli }}
           ssh-key: ${{ secrets.ssh-key }}
           npm-token: ${{ secrets.npm-token }}
 

@@ -4,8 +4,8 @@
 # are installed", ready to run one `vortex:<concern>:all` target.
 #
 # It exists because `repo-verify.yml` runs one job per concern and every one of
-# those jobs needs the identical six steps first. Written out per job that is
-# four copies of the same preamble, which is four places to forget to change.
+# those jobs needs the identical preamble first. Written out per job that is four
+# copies of it, which is four places to forget to change.
 #
 # Nothing here is specific to verification. Any shared workflow that needs a
 # platform repo prepared can use it, which is why it is named for the repo
@@ -30,13 +30,6 @@ inputs:
     description: "Passed to actions/checkout: 'recursive', 'true' or 'false'."
     required: false
     default: "recursive"
-  install-vortex-cli:
-    description: >-
-      Put the vortex CLI on PATH as well. Needed where a target shells out to a
-      bare `vortex`. Opt-in, because installing it costs time in every job that
-      does not need it. Requires npm-token.
-    required: false
-    default: "false"
   ssh-key:
     description: >-
       Deploy/SSH key with read access to any private submodules. Required only
@@ -46,8 +39,9 @@ inputs:
     default: ""
   npm-token:
     description: >-
-      npm token with read access to the @teamvortexsoftware scope. Required only
-      when the repo installs a package from it, or when install-vortex-cli is on.
+      npm token with read access to the @teamvortexsoftware scope. Required when
+      the repo installs a package from it, and whenever the vortex CLI has to be
+      fetched — which happens automatically for a repo that does not carry it.
     required: false
     default: ""
 
@@ -90,8 +84,33 @@ runs:
       shell: bash
       run: pnpm install --frozen-lockfile
 
+    - name: Does the repo supply the vortex CLI?
+      id: repo-cli
+      shell: bash
+      # Whether a repo depends on config-utility is the repo's own business, so
+      # this asks rather than requires. `pnpm install` links a dependency's
+      # binary into node_modules/.bin, and that is also where a `vortex:*` target
+      # finds it, since pnpm puts that directory on PATH when it runs a script.
+      # So the presence of the link is exactly the question worth asking.
+      run: |
+        if [ -x node_modules/.bin/vortex ]; then
+          echo "supplied=true" >> "$GITHUB_OUTPUT"
+          echo "the repo supplies the vortex CLI; not installing one"
+        else
+          echo "supplied=false" >> "$GITHUB_OUTPUT"
+          echo "the repo does not supply the vortex CLI; installing it globally"
+        fi
+
     - name: Setup vortex CLI
-      if: ${{ inputs.install-vortex-cli == 'true' }}
+      # Installed when the repo does not carry it, rather than when a caller
+      # remembers to ask. The platform's standard actions supply the CLI so that
+      # a target may shell out to a bare `vortex` without every repo having to
+      # take a dependency on it.
+      #
+      # Skipped without a token, because the install cannot succeed and failing
+      # here would fail every job in a repo that may not want the CLI at all. A
+      # target that then needs `vortex` fails on its own, saying so.
+      if: ${{ steps.repo-cli.outputs.supplied == 'false' && inputs.npm-token != '' }}
       uses: TeamVortexSoftware/platform-actions/actions/setup-vortex-cli@main
       with:
         npm-token: ${{ inputs.npm-token }}

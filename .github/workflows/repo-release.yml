@@ -79,14 +79,6 @@ on:
         type: string
         required: false
         default: "recursive"
-      install-vortex-cli:
-        description: >-
-          Put the vortex CLI on PATH before building. Needed where
-          vortex:build:all shells out to a bare `vortex`. Opt-in; requires
-          npm-token.
-        type: boolean
-        required: false
-        default: false
     secrets:
       tap-token:
         description: >-
@@ -178,8 +170,25 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      - name: Does the repo supply the vortex CLI?
+        id: repo-cli
+        # Same question setup-vortex-repo asks, for the same reason: pnpm links a
+        # dependency's binary into node_modules/.bin and puts that directory on
+        # PATH when it runs a script, so the link is what decides whether
+        # vortex:build:all can shell out to a bare `vortex`.
+        run: |
+          if [ -x node_modules/.bin/vortex ]; then
+            echo "supplied=true" >> "$GITHUB_OUTPUT"
+            echo "the repo supplies the vortex CLI; not installing one"
+          else
+            echo "supplied=false" >> "$GITHUB_OUTPUT"
+            echo "the repo does not supply the vortex CLI; installing it globally"
+          fi
+
       - name: Setup vortex CLI
-        if: ${{ inputs.install-vortex-cli }}
+        # Skipped without a token — the install cannot succeed, and a target that
+        # then needs `vortex` fails on its own, saying so.
+        if: ${{ steps.repo-cli.outputs.supplied == 'false' && env.NPM_TOKEN != '' }}
         uses: TeamVortexSoftware/platform-actions/actions/setup-vortex-cli@main
         with:
           npm-token: ${{ secrets.npm-token }}
