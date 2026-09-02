@@ -65,12 +65,19 @@ runs:
         # from a committed one, and every repo's .npmrc says so.
         echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
 
-        # pnpm, not npm. The package's own preinstall is `npx only-allow pnpm`
-        # — a guard meant for people working in its source repo, which ships in
-        # the published package and rejects `npm install -g` with exit 254. pnpm
-        # is also the channel the platform documents for a global install, so
-        # this is the supported path rather than a way around the guard.
-        pnpm add -g "${PACKAGE}@latest"
+        # --ignore-scripts is REQUIRED, not a precaution. The package's preinstall
+        # is `npx only-allow pnpm`, a guard meant for people working in its source
+        # repo, and it ships in the published package — so a plain `npm install -g`
+        # exits 254 before anything is unpacked. Installing a published tarball is
+        # not the case the guard is aimed at. The package has no other install
+        # lifecycle script, so nothing else is being skipped.
+        #
+        # pnpm was tried first, as the channel the how-to documents for a global
+        # install, and measured rather than assumed: on a runner `pnpm add -g`
+        # resolved 2.1.0 while the registry's latest was 2.2.0, and put the binary
+        # inside the setup-pnpm action's own tree. npm gets the current version and
+        # the standard location.
+        npm install -g --ignore-scripts "${PACKAGE}@latest"
 
         # Assert rather than assume. A global install that lands somewhere off
         # PATH exits 0 and leaves the next step failing on "command not found",

@@ -57,26 +57,3 @@ jobs:
         run: |
           echo "registry latest: $(npm view @teamvortexsoftware/config-utility dist-tags.latest)"
           echo "installed:       $(vortex --version --no-check | head -1)"
-
-  # The alternative: npm with the preinstall guard skipped. Kept side by side so
-  # the choice rests on what the runner does rather than on preference.
-  install-npm-ignore-scripts:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Setup node
-        uses: actions/setup-node@v7
-        with:
-          node-version: "24"
-
-      - name: Install with npm, scripts skipped
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_READ_TOKEN }}
-        run: |
-          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
-          npm install -g --ignore-scripts "@teamvortexsoftware/config-utility@latest"
-          echo "installed at: $(command -v vortex)"
-          echo "registry latest: $(npm view @teamvortexsoftware/config-utility dist-tags.latest)"
-          vortex --version --no-check
-          vortex repo --help
