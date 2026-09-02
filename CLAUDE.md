@@ -41,7 +41,7 @@ as an input or a secret from the calling repo instead of writing it here.
   shared workflow. **This is the only copy.** The vortex CLI fetches from here
   rather than bundling its own, which is why a stub must stay valid on its own:
   `vortex repo gha install <name>` writes it into a repo, and
-  `vortex repo profile apply` keeps every installed one current.
+  `vortex repo gha update` keeps every installed one current.
 
   Every value that can be pre-set resolves from an organization-level Actions
   variable or from the `github` context, so a service repo adopting one
