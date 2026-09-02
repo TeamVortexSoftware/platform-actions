@@ -32,7 +32,7 @@ its own, so there is nothing to keep in step:
 ```bash
 vortex repo gha list                  # what is on offer, and what a repo has
 vortex repo gha install repo-verify   # writes .github/workflows/vtx-repo-verify.yml
-vortex repo profile apply             # keeps every installed stub current
+vortex repo gha update                # keeps every installed stub current
 ```
 
 Every value that can be pre-set comes from an organization-level Actions
