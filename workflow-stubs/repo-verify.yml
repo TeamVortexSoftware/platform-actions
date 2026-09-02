@@ -7,9 +7,9 @@
 # never touched. To stop the file being managed at all, rename it to drop the
 # `vtx-` prefix; you keep a working workflow that is then entirely your own.
 
-# vtx:keep name
+# ------------------------------------------------------------ vtx:keep name ---
 name: "[VTX] Repo Verify"
-# vtx:end
+# ------------------------------------------------------------------ vtx:end ---
 
 # Leave `pull_request` BARE. With no `types:` it gives the default set — opened,
 # synchronize, reopened — which is what verification wants. Adding
@@ -21,11 +21,11 @@ name: "[VTX] Repo Verify"
 # no PR yet. GitHub only offers it in the UI once this file is on the default
 # branch.
 
-# vtx:keep triggers
+# -------------------------------------------------------- vtx:keep triggers ---
 on:
     pull_request:
     workflow_dispatch:
-# vtx:end
+# ------------------------------------------------------------------ vtx:end ---
 
 jobs:
     verify:
@@ -76,7 +76,7 @@ jobs:
         #       of submodules only.
         # =====================================================================
 
-        # vtx:keep inputs
+        # -------------------------------------------------- vtx:keep inputs ---
         with:
             skip-lint: false
             skip-test: false
@@ -84,7 +84,7 @@ jobs:
             skip-build: true
             node-version: ""
             submodules: "recursive"
-        # vtx:end
+        # ---------------------------------------------------------- vtx:end ---
 
         # =====================================================================
         # SECRETS — both are organization-level, so they already exist for every
@@ -110,14 +110,14 @@ jobs:
         #       than a missing credential.
         # =====================================================================
 
-        # vtx:keep secrets
+        # ------------------------------------------------- vtx:keep secrets ---
         secrets:
             ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
             npm-token: ${{ secrets.NPM_READ_TOKEN }}
-        # vtx:end
+        # ---------------------------------------------------------- vtx:end ---
 
 ####   Your own jobs and edits go INSIDE the block below.  ####
 ####   Anything outside it is replaced on the next update.  ####
 
-# vtx:keep extra
-# vtx:end
+# ----------------------------------------------------------- vtx:keep extra ---
+# ------------------------------------------------------------------ vtx:end ---

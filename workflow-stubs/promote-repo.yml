@@ -12,11 +12,11 @@
 # flow is the one thing that says which promotion they are about to fire. A repo
 # configured for a different flow should say so here.
 
-# vtx:keep name
+# ------------------------------------------------------------ vtx:keep name ---
 name: "[VTX] Promote Repo (dev develop → dev main → prod main)"
-# vtx:end
+# ------------------------------------------------------------------ vtx:end ---
 
-# vtx:keep triggers
+# -------------------------------------------------------- vtx:keep triggers ---
 on:
     workflow_dispatch:
         inputs:
@@ -25,7 +25,7 @@ on:
                 type: string
                 required: false
                 default: ""
-# vtx:end
+# ------------------------------------------------------------------ vtx:end ---
 
 jobs:
     promote-repo:
@@ -89,7 +89,7 @@ jobs:
             commit-author: ${{ vars.VTX_INFRA_PROD_COMMIT_AUTHOR }}
             committer-name: ${{ vars.VTX_INFRA_PROD_BOT_USER }}
             committer-email: ${{ vars.VTX_INFRA_PROD_BOT_USER }}@users.noreply.github.com
-            # vtx:keep inputs
+            # ---------------------------------------------- vtx:keep inputs ---
             dev-owner: ${{ vars.VTX_INFRA_DEV_GH_ORG }}
             dev-repo: ${{ github.event.repository.name }}
             prod-owner: ${{ vars.VTX_INFRA_PROD_GH_ORG }}
@@ -98,7 +98,7 @@ jobs:
             target-branch: main
             deployment-log-path: REPO_DEPLOYMENT_LOG.md
             lfs: false
-            # vtx:end
+            # ------------------------------------------------------ vtx:end ---
 
         # =====================================================================
         # SECRETS
@@ -109,13 +109,13 @@ jobs:
         #       do — commits it authors do not trigger the production deploys.
         # =====================================================================
 
-        # vtx:keep secrets
+        # ------------------------------------------------- vtx:keep secrets ---
         secrets:
             bot-token: ${{ secrets.VTX_INFRA_PROD_BOT_PAT }}
-        # vtx:end
+        # ---------------------------------------------------------- vtx:end ---
 
 ####   Your own jobs and edits go INSIDE the block below.  ####
 ####   Anything outside it is replaced on the next update.  ####
 
-# vtx:keep extra
-# vtx:end
+# ----------------------------------------------------------- vtx:keep extra ---
+# ------------------------------------------------------------------ vtx:end ---
