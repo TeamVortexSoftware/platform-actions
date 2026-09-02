@@ -11,11 +11,12 @@
 # someone picks it out of the Actions sidebar and clicks Run — and the branch
 # flow is the one thing that says which promotion they are about to fire. A repo
 # configured for a different flow should say so here.
-# vtx:keep name
-name: "[VTX] Promote Repo (dev develop → dev main → prod main)"
-# vtx:end
 
-# vtx:keep triggers
+# ------------------------------------------------------------ vtx:keep name ---
+name: "[VTX] Promote Repo (dev develop → dev main → prod main)"
+# ------------------------------------------------------------------ vtx:end ---
+
+# -------------------------------------------------------- vtx:keep triggers ---
 on:
     workflow_dispatch:
         inputs:
@@ -24,7 +25,7 @@ on:
                 type: string
                 required: false
                 default: ""
-# vtx:end
+# ------------------------------------------------------------------ vtx:end ---
 
 jobs:
     promote-repo:
@@ -32,19 +33,63 @@ jobs:
         if: ${{ vars.VTX_INFRA_ENV == 'production' }}
         # `uses:` cannot take an expression, so this one org is a literal.
         uses: TeamVortexSoftware/platform-actions/.github/workflows/promote-repo.yml@main
+
+        # =====================================================================
+        # SETTINGS — what each one does, and the value you get if you leave it
+        # out. This list is refreshed on every `vortex repo gha update`, so it
+        # always describes the workflow you are actually calling. Your chosen
+        # values live in the block below it and are never overwritten.
+        #
+        # The four above the block are not per-repo: the log note comes from the
+        # dispatch form, and the commit identity comes from organization
+        # variables so every promotion is authored the same way.
+        #
+        # WHICH REPOS THIS CROSSES. Required, and resolved from organization
+        # variables plus the repo's own name, so the standard dual-repo flow
+        # needs no editing. A repo whose production counterpart is named
+        # differently sets the names literally here.
+        #
+        #   dev-owner            REQUIRED
+        #       Owner of the development repository — the source of truth.
+        #
+        #   dev-repo             REQUIRED
+        #       Name of the development repository.
+        #
+        #   prod-owner           REQUIRED
+        #       Owner of the production repository — the destination.
+        #
+        #   prod-repo            REQUIRED
+        #       Name of the production repository.
+        #
+        # WHICH BRANCHES MOVE.
+        #
+        #   source-branch        default "develop"
+        #       The branch being promoted.
+        #
+        #   target-branch        default "main"
+        #       The branch promoted onto, in BOTH repositories. Pushing it to the
+        #       production repository is what triggers the production deploys.
+        #
+        # THE REST.
+        #
+        #   deployment-log-path  default "REPO_DEPLOYMENT_LOG.md"
+        #       Markdown log gaining one row per promotion, committed to the
+        #       source branch before promoting. Empty string skips the commit.
+        #
+        #   lfs                  default false
+        #       Mirror Git LFS objects to the production repository. Leave false
+        #       unless the repo actually stores binaries through LFS.
+        #
+        # A different progression is configured here, not by installing a
+        # different stub.
+        # =====================================================================
+
         with:
             deployment-log-description: ${{ inputs.description }}
             commit-author: ${{ vars.VTX_INFRA_PROD_COMMIT_AUTHOR }}
             committer-name: ${{ vars.VTX_INFRA_PROD_BOT_USER }}
             committer-email: ${{ vars.VTX_INFRA_PROD_BOT_USER }}@users.noreply.github.com
-            # Below is this repo's promotion: which repos it crosses, which
-            # branches it moves between, where the log lives, and whether LFS
-            # objects are mirrored. The defaults are the standard dual-repo flow,
-            # read from org vars so they need no editing in the common case —
-            # but they are yours, and an update leaves them as you set them.
-            # A different progression is configured here, not by installing a
-            # different stub.
-            # vtx:keep inputs
+            # ---------------------------------------------- vtx:keep inputs ---
             dev-owner: ${{ vars.VTX_INFRA_DEV_GH_ORG }}
             dev-repo: ${{ github.event.repository.name }}
             prod-owner: ${{ vars.VTX_INFRA_PROD_GH_ORG }}
@@ -53,11 +98,24 @@ jobs:
             target-branch: main
             deployment-log-path: REPO_DEPLOYMENT_LOG.md
             lfs: false
-            # vtx:end
+            # ------------------------------------------------------ vtx:end ---
+
+        # =====================================================================
+        # SECRETS
+        #
+        #   bot-token            REQUIRED
+        #       Bot PAT with write on both repositories' target branch and on the
+        #       development repository's source branch. A GITHUB_TOKEN will not
+        #       do — commits it authors do not trigger the production deploys.
+        # =====================================================================
+
+        # ------------------------------------------------- vtx:keep secrets ---
         secrets:
             bot-token: ${{ secrets.VTX_INFRA_PROD_BOT_PAT }}
+        # ---------------------------------------------------------- vtx:end ---
 
 ####   Your own jobs and edits go INSIDE the block below.  ####
 ####   Anything outside it is replaced on the next update.  ####
-# vtx:keep extra
-# vtx:end
+
+# ----------------------------------------------------------- vtx:keep extra ---
+# ------------------------------------------------------------------ vtx:end ---

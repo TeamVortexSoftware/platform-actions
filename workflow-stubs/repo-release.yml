@@ -7,11 +7,11 @@
 # never touched. To stop the file being managed at all, rename it to drop the
 # `vtx-` prefix; you keep a working workflow that is then entirely your own.
 
-# vtx:keep name
+# ------------------------------------------------------------ vtx:keep name ---
 name: "[VTX] Release Artifacts"
-# vtx:end
+# ------------------------------------------------------------------ vtx:end ---
 
-# vtx:keep triggers
+# -------------------------------------------------------- vtx:keep triggers ---
 on:
     workflow_dispatch:
         inputs:
@@ -23,7 +23,7 @@ on:
                 description: "Tag to release from. Must already exist."
                 type: string
                 required: true
-# vtx:end
+# ------------------------------------------------------------------ vtx:end ---
 
 # The called workflow creates a Release and pushes to a tap, and a called
 # workflow can hold no more permission than its caller grants. The repo default
@@ -35,27 +35,99 @@ jobs:
     release:
         # `uses:` cannot take an expression, so this one org is a literal.
         uses: TeamVortexSoftware/platform-actions/.github/workflows/repo-release.yml@main
+
+        # =====================================================================
+        # SETTINGS — what each one does, and the value you get if you leave it
+        # out. This list is refreshed on every `vortex repo gha update`, so it
+        # always describes the workflow you are actually calling. Your chosen
+        # values live in the block below it and are never overwritten.
+        #
+        # `version` and `tag` are not in that block: they are wired to the
+        # dispatch form above, so whoever clicks Run supplies them. There is
+        # nothing per-repo to decide.
+        #
+        #   targets              REQUIRED, no default
+        #       JSON array of build targets, e.g. '["darwin-arm64","linux-x64"]'.
+        #       Each one becomes a build job and reaches your build as
+        #       VORTEX_BUILD_TARGET. The installed value is a starting point, not
+        #       a default — set it to what this repo actually builds.
+        #
+        #   artifact-glob        default "dist-binary/*"
+        #       Where your build leaves its artifacts, relative to the repo root.
+        #
+        # The three tap settings go together: all three, or none. A repo can
+        # publish binaries without a Homebrew formula — clear all three and the
+        # tap step is skipped.
+        #
+        #   tap-repo             default ""
+        #       owner/name of the Homebrew tap to update. Empty skips the tap.
+        #
+        #   formula-path         default ""
+        #       Path to the formula inside the tap, e.g. Formula/vortex.rb. The
+        #       installed value says CHANGE_ME on purpose — it is not a guess you
+        #       can leave in place.
+        #
+        #   asset-pattern        default ""
+        #       Which uploaded artifact the formula points at, as a shell glob.
+        #       Must match exactly one, or the run fails rather than picking.
+        #
+        #   node-version         default ""
+        #       Empty means "read it from this repo's .nvmrc", which is what you
+        #       almost certainly want. Put a version string here to override that.
+        #
+        #   submodules           default "recursive"
+        #       What to check out alongside your repo. "recursive" also gets
+        #       submodules, and submodules inside those. Use "false" for a faster
+        #       checkout in a repo with no submodules; "true" gets the top level
+        #       of submodules only.
+        # =====================================================================
+
         with:
             version: ${{ inputs.version }}
             tag: ${{ inputs.tag }}
-            # The values below are the only per-repo ones: what to build, where
-            # the artifacts land, and which formula points at which asset. They
-            # are yours — an update leaves them exactly as you set them. A repo
-            # that ships artifacts but no formula clears tap-repo, formula-path
-            # and asset-pattern and keeps the rest.
-            # vtx:keep inputs
+            # ---------------------------------------------- vtx:keep inputs ---
             targets: '["darwin-arm64"]'
             artifact-glob: "dist-binary/*.tar.gz*"
             tap-repo: ${{ vars.VTX_HOMEBREW_TAP }}
             formula-path: Formula/CHANGE_ME.rb
             asset-pattern: "*-darwin-arm64.tar.gz"
-            # vtx:end
+            node-version: ""
+            submodules: "recursive"
+            # ------------------------------------------------------ vtx:end ---
+
+        # =====================================================================
+        # SECRETS — all three are organization-level, so they already exist and
+        # you do not have to create them.
+        #
+        #   tap-token
+        #       Write access to the TAP repository. Required when tap-repo is
+        #       set. The run's own GITHUB_TOKEN cannot reach a second repo, which
+        #       is the only reason a separate credential exists.
+        #
+        #   ssh-key
+        #       Needed if your repo has submodules. Our .gitmodules files use SSH
+        #       addresses, which the default workflow token cannot read.
+        #
+        #   npm-token
+        #       Needed if your repo installs any @teamvortexsoftware package, and
+        #       whenever the vortex CLI itself has to be fetched — which happens
+        #       automatically when the repo does not carry it as a dependency.
+        #
+        #       NOTE the installed value is NPM_TOKEN, which exists on only two
+        #       repos; everywhere else it resolves to nothing and the CLI is not
+        #       installed. If your build shells out to a bare `vortex`, change
+        #       this to NPM_READ_TOKEN, which every repo has.
+        # =====================================================================
+
+        # ------------------------------------------------- vtx:keep secrets ---
         secrets:
             tap-token: ${{ secrets.VTX_HOMEBREW_TAP_PAT }}
             npm-token: ${{ secrets.NPM_TOKEN }}
             ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
+        # ---------------------------------------------------------- vtx:end ---
 
 ####   Your own jobs and edits go INSIDE the block below.  ####
 ####   Anything outside it is replaced on the next update.  ####
-# vtx:keep extra
-# vtx:end
+
+# ----------------------------------------------------------- vtx:keep extra ---
+# ------------------------------------------------------------------ vtx:end ---
