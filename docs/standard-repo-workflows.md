@@ -78,23 +78,18 @@ What lands is this:
 name: "[VTX] Repo Verify"
 # vtx:end
 
-# Leave `pull_request` BARE. With no `types:` it gives the default set — opened,
-# synchronize, reopened — which is what verification wants. Adding
-# `types: [opened]` would mean a PR that fails, gets fixed and is re-pushed never
-# re-verifies, leaving a green tick on a tree that no longer exists.
-#
-# `workflow_dispatch` is for running verification against a branch on demand —
-# re-checking after a shared-workflow change lands, or checking a branch that has
-# no PR yet. GitHub only offers it in the UI once this file is on the default
-# branch.
-# vtx:keep triggers
+# TRIGGERS AND THE DRAFT GATE — platform-owned, deliberately NOT a vtx:keep
+# block, so a change to either half reaches every repo on the next update.
 on:
     pull_request:
+        types: [opened, synchronize, reopened, ready_for_review]
     workflow_dispatch:
-# vtx:end
 
 jobs:
     verify:
+        # A draft pull request does not verify. See "The draft gate" below.
+        if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+
         # `uses:` cannot take an expression, so this one org is a literal.
         uses: TeamVortexSoftware/platform-actions/.github/workflows/repo-verify.yml@main
         # -------------------------------------------------- vtx:keep inputs ---
@@ -169,12 +164,27 @@ string, npm answers an unauthenticated private-package request with **404 rather
 than 401**, and the run fails with `ERR_PNPM_FETCH_404` on a package that plainly
 exists.
 
-**Leave `on: pull_request` bare.** That gives the default trigger set —
-`opened`, `synchronize`, `reopened` — which is what verification wants. Adding
-`types: [opened]` would mean a PR that fails, gets fixed and re-pushed never
-re-verifies, leaving a green tick on a tree that no longer exists. That trap is
-live elsewhere on the platform; see
+**The triggers are not yours to change.** They and the `if:` on the `verify` job
+are the two halves of the draft gate, and both sit outside every `vtx:keep`
+block. `opened`, `synchronize` and `reopened` are the default set that
+verification wants; `ready_for_review` is what fires the run when a draft is
+marked ready. Do not trim the list — dropping `synchronize` in particular would
+mean a PR that fails, gets fixed and is re-pushed never re-verifies, leaving a
+green tick on a tree that no longer exists. That trap is live elsewhere on the
+platform; see
 [platform-gotchas.md](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/platform-gotchas.md).
+A repo that genuinely needs different triggers renames the file to drop the
+`vtx-` prefix and owns it outright.
+
+**The draft gate: a draft pull request does not verify.** Review is iterative,
+and without the gate every push during a review fires the full four-job fan-out.
+With it, iteration is free and the runners are spent once — on the tree the
+review finished with. Marking the PR ready fires `ready_for_review` and the run
+happens then; a push to an already-ready PR still re-verifies through
+`synchronize`. The gate buys cheap iteration, never a way to merge something
+unverified. The `github.event_name` half of the condition keeps
+`workflow_dispatch` working, where there is no `pull_request` payload to read
+`draft` from.
 
 **`workflow_dispatch` runs verification on demand**, against a branch you pick —
 useful for re-checking a branch after a change to the shared workflow lands, or
