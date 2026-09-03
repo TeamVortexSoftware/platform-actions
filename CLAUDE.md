@@ -55,6 +55,43 @@ as an input or a secret from the calling repo instead of writing it here.
   key later and have it reach copies already out; mark the inclusions instead and
   every installed file is frozen in the shape it had at install time.
 
+  A marker may be **ruled**, with dashes either side of the label, so the fenced
+  regions are findable by skimming a file that is mostly comment:
+
+  ```
+  # ---------------------------------------------------- vtx:keep inputs ---
+  # ---------------------------------------------------------- vtx:end ---
+  ```
+
+  Both forms mean the same thing and may be mixed, which is what lets a stub
+  installed before the ruled style migrate to it on the next update. **This needs
+  vortex CLI 2.2.1 or later.** Earlier releases cannot match a ruled marker, find
+  no blocks, raise no error, and write the template verbatim — silently
+  discarding what the repo had in its keep blocks.
+
+  **Every setting is written out** in a stub at its default value, with a managed
+  description block above each region giving each one's name, default and effect.
+  The block is outside the keep markers on purpose: it is refreshed on every
+  update, so it cannot rot, and a setting added later shows up in every installed
+  copy even though the value stays the repo's. Prose *inside* a keep block would
+  freeze at install time — that is the bug this layout exists to avoid, so do not
+  put any there.
+
+  **A stub declares the `vortex:*` targets its workflow runs**, in the header,
+  outside every keep block:
+
+  ```
+  # vtx:requires vortex:lint:all vortex:test:all vortex:generate:all vortex:build:all
+  # vtx:requires none
+  ```
+
+  `vortex repo gha install` and `update` read it and say when one is missing from
+  the repo's `package.json`, pointing at `vortex repo profile apply`. Advisory
+  only. Three states, and they are distinct: a list, `none` spelled out so a
+  reader can tell it was decided rather than forgotten, and **absent meaning
+  unknown** — a stub written before this convention must never have its targets
+  reported as missing.
+
   **A stub lands under a fixed name**: `.github/workflows/vtx-<shared-workflow-name>.yml`,
   with `name: "[VTX] <Title Case Name>"`. So `repo-verify.yml` installs as
   `vtx-repo-verify.yml` named `[VTX] Repo Verify`. The prefixes are what make a
