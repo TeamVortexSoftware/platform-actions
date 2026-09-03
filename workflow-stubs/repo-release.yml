@@ -90,6 +90,7 @@ jobs:
         # =====================================================================
 
         with:
+            # parameters before the vtx:keep block must not be changed
             version: ${{ inputs.version }}
             tag: ${{ inputs.tag }}
             # ---------------------------------------------- vtx:keep inputs ---
