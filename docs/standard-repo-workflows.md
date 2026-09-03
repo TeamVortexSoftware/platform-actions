@@ -97,10 +97,15 @@ jobs:
     verify:
         # `uses:` cannot take an expression, so this one org is a literal.
         uses: TeamVortexSoftware/platform-actions/.github/workflows/repo-verify.yml@main
-        # vtx:keep inputs
-        # Inputs are yours: run-build, skip-generate-check, install-vortex-cli,
-        # node-version, submodules. Add a `with:` block here if you need one.
-        # vtx:end
+        # -------------------------------------------------- vtx:keep inputs ---
+        with:
+            skip-lint: false
+            skip-test: false
+            skip-generate: false
+            skip-build: true
+            node-version: ""
+            submodules: "recursive"
+        # ---------------------------------------------------------- vtx:end ---
         secrets:
             # NPM_READ_TOKEN, not NPM_TOKEN. The read credential is published as
             # an ORG-level Actions secret under that name, so every repo has it
@@ -191,7 +196,7 @@ requires of them:
 | `vortex:lint:all`     | Read-only. Must not modify the tree.                         |
 | `vortex:test:all`     | Read-only, and **must run without credentials** (see below). |
 | `vortex:generate:all` | Mutates by design; the tree must be clean afterwards.        |
-| `vortex:build:all`    | Opt-in; its output must be gitignored.                       |
+| `vortex:build:all`    | Skipped by default (`skip-build`); its output must be gitignored. |
 
 **A dirty tree fails the job — every job.** After its target, each job stages
 everything and fails if anything changed. Staging first is deliberate: a *new*
@@ -221,14 +226,22 @@ build is held to the same rule and gives an honest message of its own.
 ## When a target needs the CLI itself
 
 Some `vortex:<concern>:all` targets shell out to a bare `vortex` —
-`vortex:generate:all` does in the infra repos. Set `install-vortex-cli: true`
-and every job puts the CLI on PATH before running its target, via
-`setup-vortex-repo`, which defers to the `setup-vortex-cli` composite action.
+`vortex:generate:all` does in the infra repos. **Nothing to configure:**
+`setup-vortex-repo` asks whether the repo supplies the CLI, and installs it when
+it does not.
 
-It installs **globally** and never reaches into `node_modules`. Whether a repo
-also carries `config-utility` as a dependency is that repo's own decision, and a
-shared workflow that relied on it would quietly do different things in different
-repos.
+The question it asks is whether `node_modules/.bin/vortex` exists, which is where
+`pnpm install` links a dependency's binary and where a `vortex:*` target finds it,
+since pnpm puts that directory on PATH when it runs a script. Present, nothing
+happens. Absent, the CLI is fetched globally.
+
+There used to be an `install-vortex-cli` input for this, and forgetting to set it
+produced a failure with nothing to point at. Whether a repo carries
+`config-utility` as a dependency stays that repo's decision — the workflow just
+adapts to the answer.
+
+One caveat: the install is skipped when no `npm-token` is available, because it
+could not succeed. A target that then needs `vortex` fails on its own and says so.
 
 There is **no version pin**. A runner starts clean every time, so latest is both
 the simplest thing to install and the most current — which also means the CLI's
@@ -254,30 +267,39 @@ keeping the vault-backed run in a separate workflow that does configure a role.
 
 ## Inputs and secrets
 
-All optional.
+All optional, and **the stub is where they are documented.** Every setting is
+written out in the installed file at its default value, with a description block
+above it giving each one's name, default and effect.
 
-| Input                 | Default     | Use it when                                              |
-| --------------------- | ----------- | -------------------------------------------------------- |
-| `node-version`        | `.nvmrc`    | You need to override the repo's pinned version.          |
-| `submodules`          | `recursive` | Set `false` in a repo with no submodules to save a step. |
-| `skip-generate-check` | `false`     | Adopting before your generators are honest. Temporary — it skips the whole `generate` job. |
-| `run-build`           | `false`     | A PR should prove the artifact still builds. Off means the `build` job reports skipped. |
-| `install-vortex-cli`  | `false`     | A target shells out to a bare `vortex`. Requires `npm-token`. |
+That is deliberate rather than lazy: the block sits outside the `vtx:keep`
+markers, so `vortex repo gha update` refreshes it, and a setting added later
+appears in every repo's own copy. A table here would be a second copy that
+nothing maintains — which is what the table this replaced had become.
+
+There is one setting per job, named for the target it runs:
+
+| | |
+| -- | -- |
+| `skip-lint`, `skip-test`, `skip-generate` | default `false` — the job runs |
+| `skip-build` | default `true` — the one job most repos do not want |
+
+Plus `node-version` (empty means read `.nvmrc`) and `submodules` (`recursive`).
+Read the stub for what each does.
 
 | Secret      | Required when                                                                                                                                                                        |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `ssh-key`   | The repo has submodules. `.gitmodules` uses SSH URLs here, which the default workflow token cannot satisfy — without a key, checkout silently produces an empty submodule directory. |
 | `npm-token` | The repo installs a package from the `@teamvortexsoftware` scope. Pass `secrets.NPM_READ_TOKEN` — the read credential is an **org-level** Actions secret under that name, so every repo has it. `NPM_TOKEN` is a repo-level secret on the two `infra-data` repos only. Written to the runner's user-level `~/.npmrc`, never the repo's committed one. |
 
-The stub already passes both secrets. An input is added below the job's `uses:`
-line:
+The stub already passes both secrets and every setting. Changing one means
+editing the value that is already there, inside the keep block:
 
 ```yaml
 jobs:
     verify:
         uses: TeamVortexSoftware/platform-actions/.github/workflows/repo-verify.yml@main
         with:
-            run-build: true
+            skip-build: false
         secrets:
             ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
             npm-token: ${{ secrets.NPM_READ_TOKEN }}
@@ -291,7 +313,9 @@ jobs:
 2. **Plumb the targets you actually have.** A placeholder is a free pass, so
    plumbing is what makes verification mean anything. Start with
    `vortex:generate:all` — it is the one that catches real drift.
-3. **Install the stub** — `vortex repo gha install repo-verify`.
+3. **Install the stub** — `vortex repo gha install repo-verify`. It says so if a
+   target the workflow runs is missing from `package.json`, and points at
+   `vortex repo profile apply`. Advisory: the install still succeeds.
 4. **Add secrets** if the repo needs them, per the table.
 5. **Open a PR and watch the four checks run.** If one fails on first adoption,
    that is the workflow doing its job — something in the repo was already stale,

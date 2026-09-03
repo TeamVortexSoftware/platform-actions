@@ -1,4 +1,4 @@
-# Releasing binaries and updating a Homebrew formula
+# Releasing artifacts and updating a Homebrew formula
 
 A repo that ships a compiled artifact calls one reusable workflow to build it,
 attach it to a GitHub Release, and point a Homebrew formula at it. The logic
@@ -49,10 +49,16 @@ touching `platform-actions`.
 
 ## When the build needs the CLI itself
 
-If a repo's `vortex:build:all` shells out to a bare `vortex`, set
-`install-vortex-cli: true` and the build job puts the latest CLI on PATH first.
-Same composite action, same reasoning, as the verification workflow — see
+Nothing to configure. If the repo does not supply the CLI itself, the build job
+installs it before running the target — the same behaviour, and the same
+reasoning, as the verification workflow. See
 [standard-repo-workflows.md](standard-repo-workflows.md).
+
+Unlike verification, this workflow calls `vortex:build:all` **without**
+`--if-present`, so a repo that has not plumbed that target fails the release
+rather than producing an empty one. The stub declares the dependency —
+`# vtx:requires vortex:build:all` — so `vortex repo gha install` says something
+at install time instead of leaving it to a release.
 
 ## Three fields move together
 
@@ -98,7 +104,7 @@ There is no log to read, because nothing started.
 | `tag` | yes | existing tag to release from |
 | `targets` | yes | JSON array of build targets; one job each |
 | `artifact-glob` | no | where the repo leaves artifacts (default `dist-binary/*`) |
-| `tap-repo` | no | `owner/name` of the tap; omit to publish binaries with no formula |
+| `tap-repo` | no | `owner/name` of the tap; omit to publish artifacts with no formula |
 | `formula-path` | no | path to the formula within the tap |
 | `asset-pattern` | no | glob picking the one asset the formula points at |
 | `node-version` | no | defaults to the repo's `.nvmrc` |

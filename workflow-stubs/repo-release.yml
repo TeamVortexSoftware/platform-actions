@@ -1,5 +1,5 @@
 # From the vortex 'repo-release' workflow template. Install as vtx-repo-release.yml.
-# See platform-actions/docs/releasing-binaries.md
+# See platform-actions/docs/releasing-artifacts.md
 #
 # MANAGED BY `vortex repo gha update`. Everything outside a `vtx:keep` block
 # is refreshed from this template on every update — which is how a change here
