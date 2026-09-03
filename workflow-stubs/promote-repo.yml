@@ -91,6 +91,7 @@ jobs:
         # =====================================================================
 
         with:
+            # parameters before the vtx:keep block must not be changed
             deployment-log-description: ${{ inputs.description }}
             commit-author: ${{ vars.VTX_INFRA_PROD_COMMIT_AUTHOR }}
             committer-name: ${{ vars.VTX_INFRA_PROD_BOT_USER }}
