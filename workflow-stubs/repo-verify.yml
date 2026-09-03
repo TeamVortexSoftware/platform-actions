@@ -7,6 +7,13 @@
 # never touched. To stop the file being managed at all, rename it to drop the
 # `vtx-` prefix; you keep a working workflow that is then entirely your own.
 
+# vtx:requires vortex:lint:all vortex:test:all vortex:generate:all vortex:build:all
+#
+# Each is called with `pnpm run --if-present`, so a missing one does not fail the
+# run — the job goes green having verified nothing. That is why the CLI says
+# something when you install or update this stub, which is the only moment a
+# person is watching.
+
 # ------------------------------------------------------------ vtx:keep name ---
 name: "[VTX] Repo Verify"
 # ------------------------------------------------------------------ vtx:end ---

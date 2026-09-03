@@ -7,6 +7,13 @@
 # never touched. To stop the file being managed at all, rename it to drop the
 # `vtx-` prefix; you keep a working workflow that is then entirely your own.
 
+# vtx:requires vortex:build:all
+#
+# Called WITHOUT `--if-present`, so a missing target fails the release outright
+# rather than quietly producing nothing. The build job also checks that
+# artifact-glob matched something, which catches the target existing as an
+# unimplemented placeholder.
+
 # ------------------------------------------------------------ vtx:keep name ---
 name: "[VTX] Release Artifacts"
 # ------------------------------------------------------------------ vtx:end ---
