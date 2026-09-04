@@ -115,8 +115,14 @@ jobs:
 
         # `uses:` cannot take an expression, so this one org is a literal.
         uses: TeamVortexSoftware/platform-actions/.github/workflows/repo-verify.yml@main
-        # -------------------------------------------------- vtx:keep inputs ---
         with:
+            # A platform-owned input sits HERE, outside the block — refreshed on
+            # every update, not yours to change, exactly like the triggers above.
+            # There are none today; this line is an illustration, not a setting
+            # you can pass. See the note under this listing.
+            example-platform-input: true
+
+        # -------------------------------------------------- vtx:keep inputs ---
             skip-lint: false
             skip-test: false
             skip-generate: false
@@ -137,7 +143,7 @@ jobs:
             npm-token: ${{ secrets.NPM_READ_TOKEN }}
 
 ####   Your own jobs and edits go INSIDE the block below.  ####
-####   Anything outside it is replaced on the next apply.  ####
+####   Anything outside it is replaced on the next update. ####
 # vtx:keep extra
 # vtx:end
 ```
@@ -147,6 +153,15 @@ shared workflow lands as `vtx-<shared-workflow-name>.yml` with
 `name: "[VTX] <Title Case Name>"`, so that in a repo carrying forty workflows of
 its own you can tell at a glance which came from here — in the directory
 listing, the Actions sidebar and the PR check list alike.
+
+**About `example-platform-input`.** It is not a real setting — passing it would
+fail. It is in the listing to show the shape, because a keep block partitions a
+YAML mapping as readily as it partitions a file: `with:` itself sits outside the
+block, so anything above the marker is platform-owned and refreshed on every
+update, while the entries between the markers are yours and never touched. Every
+input this workflow actually accepts is on the repo's side of that line today.
+The triggers and the draft gate are the live example of the same rule, one level
+up.
 
 ## Staying current
 
