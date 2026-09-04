@@ -169,10 +169,13 @@ up.
 filename is the record** — a stub is installed if and only if the file is there,
 so nothing tracks adoption separately and there is no state to drift.
 
-A stub is not a profile member, and `vortex repo profile apply` does not touch
-one. That command deploys files bundled inside the CLI; a stub is fetched from
-this repo. The whole stub lifecycle — `install`, `update`, `delete` — is the
-`gha` family.
+A stub is fetched from this repo's default branch every time it is installed or
+updated, so a change here reaches every repo on its next update and no CLI
+release sits in the path. There is no cached or bundled fallback: if this repo
+cannot be reached, the command fails rather than writing a stale copy.
+
+`vortex repo profile` is independent of `vortex repo gha` — a stub is not a
+profile member, and `profile apply` does not touch one.
 
 What it may rewrite is bounded by markers:
 
