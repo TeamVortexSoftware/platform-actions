@@ -47,8 +47,12 @@ repo's PR  →  .github/workflows/vtx-repo-verify.yml   (the stub, in your repo)
               lint        test        generate        build
 ```
 
-The split is the point. When what verification _means_ changes, the reusable
-workflow changes and **no consuming repo is touched**.
+**Those are two files in two repos, and that split is the point.** Your repo
+holds only the stub — a name, the settings you want, and any jobs of your own
+you add alongside it; the triggers and the draft gate come from here. Every
+line that decides what verification *does* lives in the reusable workflow here.
+So when what verification _means_ changes, this repo changes and **no consuming
+repo is touched**.
 
 Each job is its own runner. It checks the repo out (submodules included,
 recursively), installs Node and pnpm from the repo's own `.nvmrc` and
