@@ -4,6 +4,25 @@ Every repo on the platform verifies its pull requests the same way: a short stub
 in the repo calls one reusable workflow that holds all the logic. Adopting it is
 one command plus whatever plumbing the repo's own targets need.
 
+**A _target_ is a `package.json` script with a reserved name.** The platform
+reserves the `vortex:<concern>:<action>` namespace for them, and this workflow
+runs four: `vortex:lint:all`, `vortex:test:all`, `vortex:generate:all` and
+`vortex:build:all`. It never invokes a tool of its own — it invokes those four
+names, and what each one does inside your repo is entirely yours. That
+indirection is the whole reason one workflow can verify the vortex CLI's repo, a
+Terraform data repo and a shared-actions repo without knowing anything about any
+of them.
+
+So "adopting this workflow" is two things: installing the stub, which is one
+command, and making sure the four targets in your `package.json` actually do
+something. A target you have not filled in is not an error — it is a job that
+goes green having verified nothing.
+
+The namespace itself, and every target in it, is defined in
+[script-targets.md](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/script-targets.md).
+What *this* workflow additionally demands of the four it runs is in
+[What each target has to satisfy](#what-each-target-has-to-satisfy).
+
 ### Contents
 
 <!-- vtxmd:toc from-level=2 to-level=2 -->
