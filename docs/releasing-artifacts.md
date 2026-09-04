@@ -52,7 +52,7 @@ touching `platform-actions`.
 Nothing to configure. If the repo does not supply the CLI itself, the build job
 installs it before running the target — the same behaviour, and the same
 reasoning, as the verification workflow. See
-[standard-repo-workflows.md](standard-repo-workflows.md).
+[repo-verify.md](repo-verify.md).
 
 Unlike verification, this workflow calls `vortex:build:all` **without**
 `--if-present`, so a repo that has not plumbed that target fails the release
@@ -149,4 +149,5 @@ yours. A repo that ships artifacts but no formula clears `tap-repo`,
 - The stub to install: `platform-actions/workflow-stubs/repo-release.yml` —
   fetched from here by `vortex repo gha install`, so this is the only copy
 - The target definitions: [script-targets.md](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/script-targets.md)
-- PR verification, the sibling workflow: [standard-repo-workflows.md](standard-repo-workflows.md)
+- PR verification, the sibling workflow: [repo-verify.md](repo-verify.md)
+- The family contract: [standard-repo-workflows.md](standard-repo-workflows.md)

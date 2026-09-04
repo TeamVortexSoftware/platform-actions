@@ -1,5 +1,5 @@
 # From the vortex 'repo-verify' workflow template. Install as vtx-repo-verify.yml.
-# See platform-actions/docs/standard-repo-workflows.md
+# See platform-actions/docs/repo-verify.md
 #
 # MANAGED BY `vortex repo gha update`. Everything outside a `vtx:keep` block
 # is refreshed from this template on every update — which is how a change here
@@ -18,24 +18,61 @@
 name: "[VTX] Repo Verify"
 # ------------------------------------------------------------------ vtx:end ---
 
-# Leave `pull_request` BARE. With no `types:` it gives the default set — opened,
-# synchronize, reopened — which is what verification wants. Adding
-# `types: [opened]` would mean a PR that fails, gets fixed and is re-pushed never
-# re-verifies, leaving a green tick on a tree that no longer exists.
+# TRIGGERS AND THE DRAFT GATE. Both halves are platform-owned and sit OUTSIDE
+# every vtx:keep block, so a change to either reaches every repo on the next
+# `vortex repo gha update`. The triggers used to be a `vtx:keep triggers` block
+# whose own comment told you not to edit it — a block that means "yours" wrapped
+# around content that never was.
+#
+# The gate is two halves that only work together: `ready_for_review` in the types
+# below, and the `if:` on the verify job. Leave one half repo-editable and a repo
+# can end up holding exactly one of them — an `if:` that skips drafts with no
+# event to fire when the draft is marked ready, so the pull request never
+# verifies at all. That is a worse failure than no gate, which is why neither
+# half is yours to change.
+#
+# WHY EACH TYPE IS LISTED — the default three, plus one. Do not trim the list:
+#
+#   opened            a pull request appears. Skipped while it is a draft.
+#   synchronize       a commit is pushed. THIS IS THE ONE PEOPLE DELETE as
+#                     redundant. Without it a pull request that fails, gets fixed
+#                     and is re-pushed never re-verifies, leaving a green tick on
+#                     a tree that no longer exists.
+#   reopened          a closed pull request comes back.
+#   ready_for_review  a draft is marked ready. This is the run that matters: the
+#                     first full verification of the finished tree. Without this
+#                     type, marking a gated draft ready fires nothing at all.
 #
 # `workflow_dispatch` is for running verification against a branch on demand —
 # re-checking after a shared-workflow change lands, or checking a branch that has
 # no PR yet. GitHub only offers it in the UI once this file is on the default
-# branch.
+# branch. The gate is written so a dispatched run is never skipped.
+#
+# A repo that genuinely needs a different trigger set has the escape hatch it
+# always had: rename the file to drop the `vtx-` prefix and own it outright.
 
-# -------------------------------------------------------- vtx:keep triggers ---
 on:
     pull_request:
+        types: [opened, synchronize, reopened, ready_for_review]
     workflow_dispatch:
-# ------------------------------------------------------------------ vtx:end ---
 
 jobs:
     verify:
+        # THE DRAFT GATE. A draft pull request does not verify. Iteration during
+        # review is free, and the runners are spent once, on the tree the review
+        # finished with — marking the pull request ready fires `ready_for_review`
+        # and this condition lets that run through.
+        #
+        # A commit pushed to a READY pull request still verifies: `synchronize` is
+        # in the types above and this condition does not exclude it. The gate buys
+        # cheap iteration, never a way to merge something unverified.
+        #
+        # The `github.event_name` half is not redundant. A `workflow_dispatch` run
+        # carries no pull_request payload, so `github.event.pull_request.draft` is
+        # null there — and whether `null == false` holds is a coercion rule nobody
+        # should have to look up to know that dispatching still works. Say it.
+        if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+
         # `uses:` cannot take an expression, so this one org is a literal.
         uses: TeamVortexSoftware/platform-actions/.github/workflows/repo-verify.yml@main
 
