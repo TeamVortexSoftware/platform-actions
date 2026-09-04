@@ -1,5 +1,5 @@
 # From the vortex 'repo-verify' workflow template. Install as vtx-repo-verify.yml.
-# See platform-actions/docs/standard-repo-workflows.md
+# See platform-actions/docs/repo-verify.md
 #
 # MANAGED BY `vortex repo gha update`. Everything outside a `vtx:keep` block
 # is refreshed from this template on every update — which is how a change here

@@ -6,7 +6,7 @@
 # .github/workflows/vtx-repo-verify.yml; all the logic lives here, so changing
 # what verification means touches this file and no consuming repo. The stub to
 # install, and what each target has to satisfy, are in:
-#   platform-actions/docs/standard-repo-workflows.md
+#   platform-actions/docs/repo-verify.md
 #
 # ONE JOB PER CONCERN, running concurrently:
 #
