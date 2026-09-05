@@ -16,7 +16,7 @@ workflow _does_, and what it asks of your repo, is on its own page: see
 
 <!-- vtxmd:toc from-level=2 to-level=2 -->
 * [What every standard workflow is](#what-every-standard-workflow-is)
-* [The touch point: script targets](#the-touch-point-script-targets)
+* [Script targets: the usual touch point](#script-targets-the-usual-touch-point)
 * [Installing a stub](#installing-a-stub)
 * [What is yours, and what is not](#what-is-yours-and-what-is-not)
 * [Staying current](#staying-current)
@@ -27,15 +27,22 @@ workflow _does_, and what it asks of your repo, is on its own page: see
 
 ## What every standard workflow is
 
-Three things, always.
+Two things are true of every one of them, and a third is the shape they nearly
+always take.
 
 **A stub in your repo.** GitHub only runs workflows it finds in
 `.github/workflows/`, so a file has to exist in the repo — you cannot simply
-point at someone else's. A stub is the smallest such file: a name, a `uses:`
-line, and the handful of choices that are genuinely yours.
+point at someone else's. A stub is the smallest such file: a name, and the
+handful of choices that are genuinely yours.
 
-**A reusable workflow here.** Every line that decides what the workflow _does_
-lives in platform-actions.
+**A managed file, not a snippet.** A stub is installed, updated and removed with
+`vortex repo gha`, and every part of it that is platform-owned is refreshed from
+here each time. What a repo may change is fenced; everything outside the fence
+follows this repo.
+
+**And, as a rule, a reusable workflow here.** Every line that decides what the
+workflow _does_ lives in platform-actions, so the stub is a `uses:` and a few
+inputs.
 
 ```
 repo's PR / push / tag  →  .github/workflows/vtx-<name>.yml   (the stub, in your repo)
@@ -45,38 +52,53 @@ repo's PR / push / tag  →  .github/workflows/vtx-<name>.yml   (the stub, in yo
 
 **Those are two files in two repos, and that split is the point.** When what a
 workflow _means_ changes, this repo changes and **no consuming repo is touched**.
+A stub that held the logic itself would forfeit that, so a standard workflow
+delegates unless it has a reason not to.
 
-**Script targets as the touch point.** A standard workflow never invokes a tool
-of its own. It invokes reserved `package.json` script names, and what each one
-does inside your repo is entirely yours. That indirection is the whole reason one
-workflow can serve the vortex CLI's repo, a Terraform data repo and a
-shared-actions repo without knowing anything about any of them.
+What a standard workflow **asks of your repo** is not part of the definition, and
+varies. The established way to ask is a script target, and most use one — but
+`promote-repo` asks for nothing in your `package.json` at all, and a workflow is
+free to bring its own tooling instead. Each workflow's page says what its own
+needs are; the section below is the shared convention it will most likely be
+reaching for.
 
-## The touch point: script targets
+## Script targets: the usual touch point
 
-**The touch points between these workflows and each individual repo are well
-defined script targets in the `package.json` files.** A _target_ is a
-`package.json` script with a reserved name. The platform reserves the
-`vortex:<concern>:<action>` namespace for them, and `:all` is the contract — a
-standard workflow calls only `vortex:<concern>:all`, never a leaf.
+Where a standard workflow does need something from your repo, the platform's
+answer is a **target** — a `package.json` script with a reserved name. The
+`vortex:<concern>:<action>` namespace is reserved for them, and `:all` is the
+contract: a standard workflow calls only `vortex:<concern>:all`, never a leaf.
+
+The indirection is what lets one workflow serve the vortex CLI's repo, a
+Terraform data repo and a shared-actions repo without knowing anything about any
+of them — it invokes a name, and what that name does inside your repo is
+entirely yours.
+
+**A stub declares which targets its workflow runs**, in its header, so
+`vortex repo gha install` and `update` say when one is missing from the repo's
+`package.json` and point at `vortex repo profile apply`. That is advisory: the
+install still succeeds. Today:
+
+| Workflow       | Declares                                                                   |
+| -------------- | -------------------------------------------------------------------------- |
+| `repo-verify`  | `vortex:lint:all` `vortex:test:all` `vortex:generate:all` `vortex:build:all` |
+| `repo-release` | `vortex:build:all`                                                         |
+| `promote-repo` | `none` — spelled out, so a reader can tell it was decided rather than forgotten |
+
+So adopting a workflow that uses targets is two things: installing the stub,
+which is one command, and making sure the targets it calls exist and actually do
+something. **A target you have not filled in is not an error** — a target is
+normally invoked with `pnpm run --if-present`, so an undefined one exits 0 and
+the job succeeds having done nothing. The default repo profile ships each
+`vortex:<concern>:all` as a runnable `echo` placeholder for the repo's keeper to
+fill in, so `--if-present` is the safety net, not the design. A workflow may
+choose to be stricter — `repo-release` calls `vortex:build:all` without it, so an
+unplumbed target fails the release rather than shipping nothing.
 
 The namespace itself, and every target in it, is defined in
 [script-targets.md](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/script-targets.md).
 Which targets a given workflow runs, and what it additionally demands of them, is
 on that workflow's own page.
-
-So adopting any standard workflow is two things: installing the stub, which is
-one command, and making sure the targets it calls exist and actually do
-something. **A target you have not filled in is not an error** — every target is
-invoked with `pnpm run --if-present`, so an undefined one exits 0 and the job
-succeeds having done nothing. The default repo profile ships each
-`vortex:<concern>:all` as a runnable `echo` placeholder for the repo's keeper to
-fill in, so `--if-present` is the safety net, not the design.
-
-A stub declares the targets its workflow runs in its header, so
-`vortex repo gha install` and `update` say when one is missing from the repo's
-`package.json` and point at `vortex repo profile apply`. That is advisory: the
-install still succeeds.
 
 ## Installing a stub
 
@@ -191,5 +213,5 @@ For a standard workflow named `<name>`:
   `platform-actions/.github/workflows/<name>.yml`
 - Shared building blocks: `platform-actions/actions/` — e.g.
   `setup-vortex-repo`, `assert-clean-tree`
-- The target definitions:
+- The target definitions, for the workflows that use them:
   [script-targets.md](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/script-targets.md)
