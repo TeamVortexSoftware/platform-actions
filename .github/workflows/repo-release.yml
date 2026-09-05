@@ -6,7 +6,7 @@
 # A consuming repo calls this from a stub in its own .github/workflows/; all the
 # logic lives here, so the next tool distributed this way reuses it rather than
 # copying it. The stub to paste is in:
-#   platform-actions/docs/standard-repo-workflows.md
+#   platform-actions/docs/releasing-artifacts.md
 #
 # What it does, and why in this order:
 #   1. guard    the tag exists and names the version being released

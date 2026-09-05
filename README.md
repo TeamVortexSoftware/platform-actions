@@ -14,8 +14,10 @@ hub for platform-wide documentation.
 How to call what lives here — the caller stub, inputs, secrets and failure modes
 — is documented beside the workflow it describes:
 
-- [Standard repo workflows](docs/standard-repo-workflows.md) — `repo-verify.yml`,
-  the shared pull-request verification workflow
+- [Standard repo workflows](docs/standard-repo-workflows.md) — what every
+  standard workflow has in common, and how a stub is installed and kept current
+- [repo-verify](docs/repo-verify.md) — `repo-verify.yml`, the shared
+  pull-request verification workflow
 - [Promoting a repo to production](docs/promoting-to-production.md) —
   `promote-repo.yml`, the shared two-org promotion workflow
 
