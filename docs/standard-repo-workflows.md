@@ -9,8 +9,18 @@ that hold all the logic.
 
 **This page is the family contract** — what every standard workflow has in
 common, and how one is installed, updated and removed. What an individual
-workflow _does_, and what it asks of your repo, is on its own page: see
-[The standard workflows](#the-standard-workflows).
+workflow _does_, and what it asks of your repo, is on its own page. The standard
+workflows are:
+
+| Workflow                                             | What it is for                                            |
+| ---------------------------------------------------- | --------------------------------------------------------- |
+| [repo-verify](workflows/repo-verify.md)              | verifying pull requests — lint, test, generate, build     |
+| [promote-repo](workflows/promoting-to-production.md) | promoting a repo to production across the two GitHub orgs |
+| [repo-release](workflows/releasing-artifacts.md)     | releasing an artifact, and updating a Homebrew formula    |
+
+Adding another is adding a stub to `workflow-stubs/`, the reusable workflow it
+calls to `.github/workflows/`, and a page beside these — the contract on this
+page does not change except for the table above.
 
 ### Contents
 
@@ -22,9 +32,8 @@ workflow _does_, and what it asks of your repo, is on its own page: see
 - [What is yours, and what is not](#what-is-yours-and-what-is-not)
 - [Staying current](#staying-current)
 - [Inputs and secrets](#inputs-and-secrets)
-- [The standard workflows](#the-standard-workflows)
 - [Where things live](#where-things-live)
-  <!-- vtxmd:end -->
+    <!-- vtxmd:end -->
 
 ## What every standard workflow is
 
@@ -191,18 +200,6 @@ that nothing maintains.
 
 Secrets follow the same rule. Where one is an organization-level Actions secret,
 the stub already names it and goes in unedited.
-
-## The standard workflows
-
-| Workflow                                   | What it is for                                            |
-| ------------------------------------------ | --------------------------------------------------------- |
-| [repo-verify](repo-verify.md)              | verifying pull requests — lint, test, generate, build     |
-| [promote-repo](promoting-to-production.md) | promoting a repo to production across the two GitHub orgs |
-| [repo-release](releasing-artifacts.md)     | releasing an artifact, and updating a Homebrew formula    |
-
-Adding another is adding a stub to `workflow-stubs/`, the reusable workflow it
-calls to `.github/workflows/`, and a page beside these — the contract on this
-page does not change.
 
 ## Where things live
 
