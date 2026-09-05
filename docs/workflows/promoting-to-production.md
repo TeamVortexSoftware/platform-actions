@@ -61,7 +61,7 @@ timestamp.
 
 ## Inputs
 
-<!-- vtxmd:workflow-inputs ../.github/workflows/promote-repo.yml -->
+<!-- vtxmd:workflow-inputs ../../.github/workflows/promote-repo.yml -->
 | Input | Default | Description |
 | --- | --- | --- |
 | `dev-owner` | _required_ | Owner of the development repository — the source of truth. |
@@ -80,7 +80,7 @@ timestamp.
 
 ## Secrets
 
-<!-- vtxmd:workflow-inputs ../.github/workflows/promote-repo.yml section=secrets -->
+<!-- vtxmd:workflow-inputs ../../.github/workflows/promote-repo.yml section=secrets -->
 | Secret | Required | Description |
 | --- | --- | --- |
 | `bot-token` | yes | Bot PAT with write on both repositories' target branch and on the development repository's source branch. A GITHUB_TOKEN will not do — commits it authors do not trigger the production deploys. |
@@ -88,7 +88,7 @@ timestamp.
 
 ## Outputs
 
-<!-- vtxmd:workflow-inputs ../.github/workflows/promote-repo.yml section=outputs -->
+<!-- vtxmd:workflow-inputs ../../.github/workflows/promote-repo.yml section=outputs -->
 | Output | Description |
 | --- | --- |
 | `promoted-sha` | The commit now on the target branch in both repositories. |

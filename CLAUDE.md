@@ -121,7 +121,7 @@ That is the trade for keeping the logic in one place: **a broken workflow on
 `repo-verify.yml` runs a repo's `vortex:<concern>:all` scripts. The namespace,
 what each concern means, and which of them mutate are defined in
 `platform-repos/docs/script-targets.md`. The caller stub and adoption steps are
-in `docs/repo-verify.md`; what every standard workflow has in common is in
+in `docs/workflows/repo-verify.md`; what every standard workflow has in common is in
 `docs/standard-repo-workflows.md`.
 
 Do not encode a repo's specifics in a shared workflow — that is what the targets
