@@ -46,55 +46,14 @@ also mean separate check names, which is what a branch-protection rule keys off.
 
 ## The stub
 
-```yaml
-# From the vortex 'repo-verify' workflow template. Install as vtx-repo-verify.yml.
-# See platform-actions/docs/repo-verify.md
-#
-# MANAGED BY `vortex repo gha update`. Everything outside a `vtx:keep` block
-# is refreshed from this template on every update — which is how a change here
-# reaches every repo that installed it. Everything INSIDE a block is yours and is
-# never touched. To stop the file being managed at all, rename it to drop the
-# `vtx-` prefix; you keep a working workflow that is then entirely your own.
+The file `vortex repo gha install repo-verify` writes into your repo is
+[`workflow-stubs/repo-verify.yml`](../workflow-stubs/repo-verify.yml) — read it
+there rather than a copy here, which would be a second version to keep in step.
 
-# vtx:keep name
-name: "[VTX] Repo Verify"
-# vtx:end
-
-# TRIGGERS AND THE DRAFT GATE — platform-owned, deliberately NOT a vtx:keep
-# block, so a change to either half reaches every repo on the next update.
-on:
-    pull_request:
-        types: [opened, synchronize, reopened, ready_for_review]
-    workflow_dispatch:
-
-jobs:
-    verify:
-        # A draft pull request does not verify. See "The draft gate" below.
-        if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
-
-        # `uses:` cannot take an expression, so this one org is a literal.
-        uses: TeamVortexSoftware/platform-actions/.github/workflows/repo-verify.yml@main
-        # -------------------------------------------------- vtx:keep inputs ---
-        with:
-            skip-lint: false
-            skip-test: false
-            skip-generate: false
-            skip-build: true
-            node-version: ""
-            submodules: "recursive"
-        # ---------------------------------------------------------- vtx:end ---
-        secrets:
-            ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
-            npm-token: ${{ secrets.NPM_READ_TOKEN }}
-
-####   Your own jobs and edits go INSIDE the block below.  ####
-####   Anything outside it is replaced on the next update. ####
-# vtx:keep extra
-# vtx:end
-```
-
-The installed file carries a description block above each region giving every
-setting's name, default and effect — that block, not this page, is the reference.
+It is worth opening once. Every setting is written out at its default value with
+a description block above it giving each one's name, default and effect, and that
+block is refreshed on every `vortex repo gha update`, so it is the reference this
+page deliberately does not duplicate.
 
 ## The triggers, and the draft gate
 
@@ -240,19 +199,9 @@ than loud: the token resolves to an empty string, npm answers an unauthenticated
 private-package request with **404 rather than 401**, and the run fails with
 `ERR_PNPM_FETCH_404` on a package that plainly exists.
 
-The stub already passes both secrets and every setting. Changing one means
-editing the value that is already there, inside the keep block:
-
-```yaml
-jobs:
-    verify:
-        uses: TeamVortexSoftware/platform-actions/.github/workflows/repo-verify.yml@main
-        with:
-            skip-build: false
-        secrets:
-            ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
-            npm-token: ${{ secrets.NPM_READ_TOKEN }}
-```
+The stub already passes both secrets and every setting, so changing one means
+editing the value that is already there, between the `vtx:keep inputs` markers —
+never adding a `with:` block of your own.
 
 ## Adopting it in a repo
 

@@ -79,11 +79,11 @@ entirely yours.
 `package.json` and point at `vortex repo profile apply`. That is advisory: the
 install still succeeds. Today:
 
-| Workflow       | Declares                                                                   |
-| -------------- | -------------------------------------------------------------------------- |
-| `repo-verify`  | `vortex:lint:all` `vortex:test:all` `vortex:generate:all` `vortex:build:all` |
-| `repo-release` | `vortex:build:all`                                                         |
-| `promote-repo` | `none` — spelled out, so a reader can tell it was decided rather than forgotten |
+| Workflow                                     | Declares                                                                     |
+| -------------------------------------------- | ---------------------------------------------------------------------------- |
+| [`repo-verify`](repo-verify.md)              | `vortex:lint:all` `vortex:test:all` `vortex:generate:all` `vortex:build:all` |
+| [`repo-release`](releasing-artifacts.md)     | `vortex:build:all`                                                           |
+| [`promote-repo`](promoting-to-production.md) | `none` — spelled out, so a reader can tell it was decided rather than forgotten |
 
 So adopting a workflow that uses targets is two things: installing the stub,
 which is one command, and making sure the targets it calls exist and actually do
@@ -193,11 +193,11 @@ the stub already names it and goes in unedited.
 
 ## The standard workflows
 
-| Workflow       | What it is for                                            | Page                                                    |
-| -------------- | --------------------------------------------------------- | ------------------------------------------------------- |
-| `repo-verify`  | verifying pull requests — lint, test, generate, build     | [repo-verify.md](repo-verify.md)                        |
-| `promote-repo` | promoting a repo to production across the two GitHub orgs | [promoting-to-production.md](promoting-to-production.md) |
-| `repo-release` | releasing an artifact, and updating a Homebrew formula    | [releasing-artifacts.md](releasing-artifacts.md)        |
+| Workflow                                        | What it is for                                            |
+| ----------------------------------------------- | --------------------------------------------------------- |
+| [`repo-verify`](repo-verify.md)                 | verifying pull requests — lint, test, generate, build     |
+| [`promote-repo`](promoting-to-production.md)    | promoting a repo to production across the two GitHub orgs |
+| [`repo-release`](releasing-artifacts.md)        | releasing an artifact, and updating a Homebrew formula    |
 
 Adding another is adding a stub to `workflow-stubs/`, the reusable workflow it
 calls to `.github/workflows/`, and a page beside these — the contract on this
