@@ -15,15 +15,16 @@ workflow _does_, and what it asks of your repo, is on its own page: see
 ### Contents
 
 <!-- vtxmd:toc from-level=2 to-level=2 -->
-* [What every standard workflow is](#what-every-standard-workflow-is)
-* [Script targets: the usual touch point](#script-targets-the-usual-touch-point)
-* [Installing a stub](#installing-a-stub)
-* [What is yours, and what is not](#what-is-yours-and-what-is-not)
-* [Staying current](#staying-current)
-* [Inputs and secrets](#inputs-and-secrets)
-* [The standard workflows](#the-standard-workflows)
-* [Where things live](#where-things-live)
-<!-- vtxmd:end -->
+
+- [What every standard workflow is](#what-every-standard-workflow-is)
+- [Script targets: the usual touch point](#script-targets-the-usual-touch-point)
+- [Installing a stub](#installing-a-stub)
+- [What is yours, and what is not](#what-is-yours-and-what-is-not)
+- [Staying current](#staying-current)
+- [Inputs and secrets](#inputs-and-secrets)
+- [The standard workflows](#the-standard-workflows)
+- [Where things live](#where-things-live)
+  <!-- vtxmd:end -->
 
 ## What every standard workflow is
 
@@ -79,10 +80,10 @@ entirely yours.
 `package.json` and point at `vortex repo profile apply`. That is advisory: the
 install still succeeds. Today:
 
-| Workflow                                     | Declares                                                                     |
-| -------------------------------------------- | ---------------------------------------------------------------------------- |
-| [`repo-verify`](repo-verify.md)              | `vortex:lint:all` `vortex:test:all` `vortex:generate:all` `vortex:build:all` |
-| [`repo-release`](releasing-artifacts.md)     | `vortex:build:all`                                                           |
+| Workflow                                     | Declares                                                                        |
+| -------------------------------------------- | ------------------------------------------------------------------------------- |
+| [`repo-verify`](repo-verify.md)              | `vortex:lint:all` `vortex:test:all` `vortex:generate:all` `vortex:build:all`    |
+| [`repo-release`](releasing-artifacts.md)     | `vortex:build:all`                                                              |
 | [`promote-repo`](promoting-to-production.md) | `none` — spelled out, so a reader can tell it was decided rather than forgotten |
 
 So adopting a workflow that uses targets is two things: installing the stub,
@@ -147,7 +148,7 @@ jobs:
             # A platform-owned input sits HERE, outside the block.
             example-platform-input: true
 
-        # ------------------------------------------- vtx:keep inputs ---
+            # ------------------------------------------- vtx:keep inputs ---
             # ...and the settings that are yours sit between the markers.
             some-setting: false
         # --------------------------------------------------- vtx:end ---
@@ -159,10 +160,10 @@ decision, and its page says so.
 
 **Two ways out, and they differ:**
 
-|                                    |                                                                        |
-| ---------------------------------- | ---------------------------------------------------------------------- |
+|                                    |                                                                         |
+| ---------------------------------- | ----------------------------------------------------------------------- |
 | **rename** the file to drop `vtx-` | stops it being managed; you keep a working workflow, now entirely yours |
-| `vortex repo gha delete <name>`    | removes the workflow                                                   |
+| `vortex repo gha delete <name>`    | removes the workflow                                                    |
 
 ## Staying current
 
@@ -193,11 +194,11 @@ the stub already names it and goes in unedited.
 
 ## The standard workflows
 
-| Workflow                                        | What it is for                                            |
-| ----------------------------------------------- | --------------------------------------------------------- |
-| [`repo-verify`](repo-verify.md)                 | verifying pull requests — lint, test, generate, build     |
-| [`promote-repo`](promoting-to-production.md)    | promoting a repo to production across the two GitHub orgs |
-| [`repo-release`](releasing-artifacts.md)        | releasing an artifact, and updating a Homebrew formula    |
+| Workflow                                   | What it is for                                            |
+| ------------------------------------------ | --------------------------------------------------------- |
+| [repo-verify](repo-verify.md)              | verifying pull requests — lint, test, generate, build     |
+| [promote-repo](promoting-to-production.md) | promoting a repo to production across the two GitHub orgs |
+| [repo-release](releasing-artifacts.md)     | releasing an artifact, and updating a Homebrew formula    |
 
 Adding another is adding a stub to `workflow-stubs/`, the reusable workflow it
 calls to `.github/workflows/`, and a page beside these — the contract on this
