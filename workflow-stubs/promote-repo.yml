@@ -1,5 +1,5 @@
 # From the vortex 'promote-repo' workflow template. Install as vtx-promote-repo.yml.
-# See platform-actions/docs/promoting-to-production.md
+# See platform-actions/docs/workflows/promoting-to-production.md
 #
 # MANAGED BY `vortex repo gha update`. Everything outside a `vtx:keep` block
 # is refreshed from this template on every update — which is how a change here

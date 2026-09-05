@@ -150,4 +150,4 @@ yours. A repo that ships artifacts but no formula clears `tap-repo`,
   fetched from here by `vortex repo gha install`, so this is the only copy
 - The target definitions: [script-targets.md](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/script-targets.md)
 - PR verification, the sibling workflow: [repo-verify.md](repo-verify.md)
-- The family contract: [standard-repo-workflows.md](standard-repo-workflows.md)
+- The family contract: [standard-repo-workflows.md](../standard-repo-workflows.md)

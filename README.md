@@ -16,10 +16,12 @@ How to call what lives here — the caller stub, inputs, secrets and failure mod
 
 - [Standard repo workflows](docs/standard-repo-workflows.md) — what every
   standard workflow has in common, and how a stub is installed and kept current
-- [repo-verify](docs/repo-verify.md) — `repo-verify.yml`, the shared
+- [repo-verify](docs/workflows/repo-verify.md) — `repo-verify.yml`, the shared
   pull-request verification workflow
-- [Promoting a repo to production](docs/promoting-to-production.md) —
+- [Promoting a repo to production](docs/workflows/promoting-to-production.md) —
   `promote-repo.yml`, the shared two-org promotion workflow
+- [Releasing artifacts](docs/workflows/releasing-artifacts.md) —
+  `repo-release.yml`, the shared release workflow
 
 Platform-wide context those docs assume — what the `vortex:*` script targets
 mean, why production lives in a second organization — stays in the umbrella's

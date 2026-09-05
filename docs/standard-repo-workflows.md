@@ -25,15 +25,14 @@ page does not change except for the table above.
 ### Contents
 
 <!-- vtxmd:toc from-level=2 to-level=2 -->
-
-- [What every standard workflow is](#what-every-standard-workflow-is)
-- [Script targets: the usual touch point](#script-targets-the-usual-touch-point)
-- [Installing a stub](#installing-a-stub)
-- [What is yours, and what is not](#what-is-yours-and-what-is-not)
-- [Staying current](#staying-current)
-- [Inputs and secrets](#inputs-and-secrets)
-- [Where things live](#where-things-live)
-    <!-- vtxmd:end -->
+* [What every standard workflow is](#what-every-standard-workflow-is)
+* [Script targets: the usual touch point](#script-targets-the-usual-touch-point)
+* [Installing a stub](#installing-a-stub)
+* [What is yours, and what is not](#what-is-yours-and-what-is-not)
+* [Staying current](#staying-current)
+* [Inputs and secrets](#inputs-and-secrets)
+* [Where things live](#where-things-live)
+<!-- vtxmd:end -->
 
 ## What every standard workflow is
 
@@ -91,9 +90,9 @@ install still succeeds. Today:
 
 | Workflow                                     | Declares                                                                        |
 | -------------------------------------------- | ------------------------------------------------------------------------------- |
-| [`repo-verify`](repo-verify.md)              | `vortex:lint:all` `vortex:test:all` `vortex:generate:all` `vortex:build:all`    |
-| [`repo-release`](releasing-artifacts.md)     | `vortex:build:all`                                                              |
-| [`promote-repo`](promoting-to-production.md) | `none` — spelled out, so a reader can tell it was decided rather than forgotten |
+| [`repo-verify`](workflows/repo-verify.md)              | `vortex:lint:all` `vortex:test:all` `vortex:generate:all` `vortex:build:all`    |
+| [`repo-release`](workflows/releasing-artifacts.md)     | `vortex:build:all`                                                              |
+| [`promote-repo`](workflows/promoting-to-production.md) | `none` — spelled out, so a reader can tell it was decided rather than forgotten |
 
 So adopting a workflow that uses targets is two things: installing the stub,
 which is one command, and making sure the targets it calls exist and actually do

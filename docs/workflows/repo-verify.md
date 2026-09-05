@@ -6,7 +6,7 @@ in the repo calls one reusable workflow that holds all the logic.
 This page covers `repo-verify` specifically. What it has in common with every
 other standard workflow — the stub/reusable split, keep blocks, installing and
 staying current — is in
-[standard-repo-workflows.md](standard-repo-workflows.md).
+[standard-repo-workflows.md](../standard-repo-workflows.md).
 
 ### Contents
 
@@ -47,7 +47,7 @@ also mean separate check names, which is what a branch-protection rule keys off.
 ## The stub
 
 The file `vortex repo gha install repo-verify` writes into your repo is
-[`workflow-stubs/repo-verify.yml`](../workflow-stubs/repo-verify.yml) — read it
+[`workflow-stubs/repo-verify.yml`](../../workflow-stubs/repo-verify.yml) — read it
 there rather than a copy here, which would be a second version to keep in step.
 
 It is worth opening once. Every setting is written out at its default value with
@@ -80,6 +80,13 @@ review finished with. Marking the PR ready fires `ready_for_review` and the run
 happens then; a push to an already-ready PR still re-verifies through
 `synchronize`. The gate buys cheap iteration, never a way to merge something
 unverified.
+
+**What the gate is for, on the other side.** The platform's ticket workflow is
+built on it: `vortex repo branches pr` opens drafts, fixes are pushed onto them
+during review for nothing, and `vortex repo branches ready` ends the pass and
+fires this run across every repo the ticket touched. That loop, and who runs
+which half of it, is in
+[working-with-claude.md](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/working-with-claude.md).
 
 A gated push still _creates_ a run: it completes as `skipped` in about two
 seconds, having claimed no runner. While a PR is a draft the only check on it is
@@ -176,7 +183,7 @@ keeping the vault-backed run in a separate workflow that does configure a role.
 ## Its inputs and secrets
 
 All optional, and the stub is where they are documented — see
-[Inputs and secrets](standard-repo-workflows.md#inputs-and-secrets) for why a
+[Inputs and secrets](../standard-repo-workflows.md#inputs-and-secrets) for why a
 table here would rot.
 
 There is one setting per job, named for the target it runs:
@@ -229,4 +236,4 @@ never adding a `with:` block of your own.
   `platform-actions/actions/assert-clean-tree/`
 - The target definitions:
   [script-targets.md](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/script-targets.md)
-- The family contract: [standard-repo-workflows.md](standard-repo-workflows.md)
+- The family contract: [standard-repo-workflows.md](../standard-repo-workflows.md)
