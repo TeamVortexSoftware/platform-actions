@@ -11,13 +11,13 @@
     "vortex:test:all": "echo 'run the complete test battery'",
     "vortex:lint:all": "echo 'read-only correctness/style/policy checks'",
     "vortex:lint:fix": "echo 'apply the fixes vortex:lint:all reports'",
-    "vortex:generate:all": "vortex markdown update README.md"
+    "vortex:generate:all": "vortex markdown update docs README.md"
   },
   "engines": {
     "node": ">=24.0.0"
   },
   "packageManager": "pnpm@11.5.0",
   "dependencies": {
-    "@teamvortexsoftware/config-utility": "1.14.0"
+    "@teamvortexsoftware/config-utility": "2.2.1"
   }
 }

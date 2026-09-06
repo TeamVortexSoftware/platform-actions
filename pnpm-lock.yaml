@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@teamvortexsoftware/config-utility':
-        specifier: 1.14.0
-        version: 1.14.0
+        specifier: 2.2.1
+        version: 2.2.1
 
 packages:
 
@@ -140,8 +140,8 @@ packages:
     resolution: {integrity: sha512-0JFs3V2y2M9tKW5na/qxe69Zv+uxLMO7QBbhxF/FHu/Gp2NFZAAL9tWl9PU02xxo07pb3G9FTyjNc6D5uZrJIg==}
     engines: {node: '>=18.0.0'}
 
-  '@teamvortexsoftware/config-utility@1.14.0':
-    resolution: {integrity: sha512-U6C7/pB+i6h86LKCqa0NyPM4OLg9nToYcNRWG85VEabYEgJYZNkkfOqcXQvgXhzmDwjLF7vBPbkBBe3VydYgNg==}
+  '@teamvortexsoftware/config-utility@2.2.1':
+    resolution: {integrity: sha512-z/ia9ze/BTv/yGcj8ktC8AItzrp5LlC2PT8jGs70psHzsfIYNshfgHgSf7hfmhgfaJeMsuqzZvWgAdf9PqnlRQ==}
     engines: {node: '>=24.0.0'}
     hasBin: true
 
@@ -921,7 +921,7 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@teamvortexsoftware/config-utility@1.14.0':
+  '@teamvortexsoftware/config-utility@2.2.1':
     dependencies:
       '@aws-sdk/client-secrets-manager': 3.1102.0
       '@modelcontextprotocol/sdk': 1.30.0(zod@4.4.3)
