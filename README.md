@@ -41,10 +41,16 @@ vortex repo gha update                # keeps every installed stub current
 
 Every value that can be pre-set comes from an organization-level Actions
 variable, so a stub goes in unedited. What a repo may change is fenced by
-`# vtx:keep <name>` … `# vtx:end` blocks: content inside a block is the repo's
-and is never touched, everything outside it is refreshed on every apply. That
-polarity is deliberate — it is what lets a stub gain a key later and have it
-reach every installed copy.
+`# vtx:keep <name>` … `# vtx:end` blocks: content inside a block is the repo's,
+everything outside it is refreshed on every apply.
+
+Inside the settings block that split is finer, and it has to be: the **values**
+are the repo's, but **which settings exist** is the workflow's. An update adds any
+setting the called workflow declares and the file lacks, at that workflow's own
+default, and removes any it no longer declares. A setting the callee does not
+declare is not a choice a repo made — GitHub rejects the whole workflow file over
+it — so a stub gains and loses settings on its own while anything the repo has set
+is left alone.
 
 ### How a stub is named where it lands
 

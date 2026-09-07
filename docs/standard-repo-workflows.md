@@ -136,7 +136,16 @@ Every stub is a managed file, partitioned by markers:
 - everything **outside** a `# vtx:keep <name>` … `# vtx:end` block is
   platform-owned and refreshed from the published stub on every update — which is
   how a change here reaches every repo that installed it
-- everything **inside** a block is yours and is never touched
+- everything **inside** a block is yours — its **values**, that is. Which
+  settings exist in the `with:` map is the called workflow's: an update adds any
+  setting that workflow declares and your file lacks, at its declared default,
+  and removes any the workflow no longer declares. A setting the callee does not
+  declare is a workflow-file error rather than a preference, so keeping it would
+  only break the run. Values you have set are never rewritten.
+
+An input that is `required` with no default is the one thing an update cannot
+fill in — only your repo knows what it should be — so a stub missing one stops
+the run and says which, rather than inventing a value.
 
 Blocks are matched by name, so one the stub later adds arrives carrying its
 default, and one it drops disappears. Unpaired markers abort the run with nothing

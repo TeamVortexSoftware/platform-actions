@@ -50,10 +50,16 @@ as an input or a secret from the calling repo instead of writing it here.
   **Editing a stub changes every repo that installed it**, on their next apply —
   so treat one like the reusable workflow beside it, not like a snippet. What a
   repo may change is fenced by `# vtx:keep <name>` … `# vtx:end` blocks: inside a
-  block is the repo's and is never touched, everything outside is refreshed.
-  Marking the *exclusions* rather than the inclusions is what lets a stub gain a
-  key later and have it reach copies already out; mark the inclusions instead and
-  every installed file is frozen in the shape it had at install time.
+  block is the repo's, everything outside is refreshed. Marking the *exclusions*
+  rather than the inclusions is what lets a change reach copies already out; mark
+  the inclusions instead and every installed file is frozen in the shape it had at
+  install time.
+
+  The settings block splits finer still: the **values** are the repo's, the **set
+  of settings** is the called workflow's. An update reconciles the `with:` map
+  against what that workflow declares — adding what is missing at its default,
+  removing what it no longer declares — because a setting the callee does not
+  declare is a workflow-file error, not a preference.
 
   A marker may be **ruled**, with dashes either side of the label, so the fenced
   regions are findable by skimming a file that is mostly comment:

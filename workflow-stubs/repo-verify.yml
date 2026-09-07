@@ -3,9 +3,16 @@
 #
 # MANAGED BY `vortex repo gha update`. Everything outside a `vtx:keep` block
 # is refreshed from this template on every update — which is how a change here
-# reaches every repo that installed it. Everything INSIDE a block is yours and is
-# never touched. To stop the file being managed at all, rename it to drop the
-# `vtx-` prefix; you keep a working workflow that is then entirely your own.
+# reaches every repo that installed it. Inside a block the VALUES are yours.
+#
+# Which SETTINGS EXIST is not: an update reconciles the `with:` map against what
+# the called workflow declares, adding any it is missing at that workflow's own
+# default and removing any the workflow no longer declares. A setting the callee
+# does not declare is a workflow-file error, not a preference — GitHub refuses
+# the whole file over it. Your chosen values are never rewritten.
+#
+# To stop the file being managed at all, rename it to drop the `vtx-` prefix;
+# you keep a working workflow that is then entirely your own.
 
 # vtx:requires vortex:lint:all vortex:test:all vortex:generate:all vortex:build:all
 #
