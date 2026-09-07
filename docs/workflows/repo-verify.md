@@ -28,8 +28,8 @@ staying current — is in
 repo's PR  →  .github/workflows/vtx-repo-verify.yml   (the stub, in your repo)
                         ↓  uses:
               platform-actions/.github/workflows/repo-verify.yml   (all the logic)
-                        ↓  runs, as four concurrent jobs
-              lint        test        generate        build
+                        ↓  runs, as three concurrent jobs
+              lint            test            generate
 ```
 
 Each job is its own runner. It checks the repo out (submodules included,
@@ -39,7 +39,7 @@ recursively), installs Node and pnpm from the repo's own `.nvmrc` and
 unchanged. That preamble is the `setup-vortex-repo` composite action; the tree
 check is `assert-clean-tree`.
 
-**Four jobs rather than four steps, so one run tells you everything.** Run
+**Separate jobs rather than steps of one, so one run tells you everything.** Run
 sequentially, a lint failure ends the run and you never learn whether the tests
 pass — you fix lint, push, and meet the next failure a run later. Separate jobs
 also mean separate check names, which is what a branch-protection rule keys off.
@@ -74,7 +74,7 @@ That trap in the `synchronize` row is live elsewhere on the platform; see
 [platform-gotchas.md](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/platform-gotchas.md).
 
 **The draft gate: a draft pull request does not verify.** Review is iterative,
-and without the gate every push during a review fires the full four-job fan-out.
+and without the gate every push during a review fires the whole fan-out.
 With it, iteration is free and the runners are spent once — on the tree the
 review finished with. Marking the PR ready fires `ready_for_review` and the run
 happens then; a push to an already-ready PR still re-verifies through
@@ -90,9 +90,13 @@ which half of it, is in
 
 A gated push still _creates_ a run: it completes as `skipped` in about two
 seconds, having claimed no runner. While a PR is a draft the only check on it is
-`verify` (skipped) — the four inner job checks do not exist at all. **A
-branch-protection rule must therefore require the four job names, never
+`verify` (skipped) — the inner job checks do not exist at all. **A
+branch-protection rule must therefore require the inner job names, never
 `verify`**: a rule keyed on `verify` would be satisfied by a skipped one.
+
+Take the names from the workflow rather than from a list written down elsewhere.
+A rule naming a job that no longer reports blocks every merge, for good, and the
+set has changed before — `build` was one of these names until it was removed.
 
 The `github.event_name` half of the condition keeps `workflow_dispatch` working,
 where there is no `pull_request` payload to read `draft` from.
@@ -114,7 +118,13 @@ What this workflow additionally requires of them:
 | `vortex:lint:all`     | Read-only. Must not modify the tree.                              |
 | `vortex:test:all`     | Read-only, and **must run without credentials** (see below).      |
 | `vortex:generate:all` | Mutates by design; the tree must be clean afterwards.             |
-| `vortex:build:all`    | Skipped by default (`skip-build`); its output must be gitignored. |
+
+`vortex:build:all` is not in that list. It is a platform target still, called by
+[repo-release](releasing-artifacts.md) per matrix entry — it is simply not a
+verification concern. A job belongs here only if something consumes what it
+produces and turns it into a verdict about the repo. Building and discarding
+produced no verdict beyond "the command exited 0", and that one is already
+lint's.
 
 **A dirty tree fails the job — every job.** After its target, each job stages
 everything and fails if anything changed. Staging first is deliberate: a _new_
@@ -122,14 +132,13 @@ file counts as drift, not only a modified one, and `git diff` alone would ignore
 an untracked path — which is exactly how a newly generated file would slip
 through.
 
-One check, four reasons it fires:
+One check, three reasons it fires:
 
 | Job        | A dirty tree means                                                                                         |
 | ---------- | ---------------------------------------------------------------------------------------------------------- |
 | `lint`     | the target modified something. `lint` is a read-only concern — mutating fixes belong in `vortex:lint:fix`. |
 | `test`     | the test battery wrote into the repo. Write to a temp dir, or gitignore the output.                        |
 | `generate` | a source was edited without regenerating. Run the target locally and commit the result.                    |
-| `build`    | build output is not gitignored. Artifacts are never committed.                                             |
 
 The read-only concerns were always required not to modify the tree; this is the
 first time it is enforced rather than documented. **Expect adoption to find
@@ -177,8 +186,8 @@ If a repo's test suite needs the vault, that is for the repo to solve inside its
 own target — by scoping `vortex:test:all` to the credential-free suites, or by
 keeping the vault-backed run in a separate workflow that does configure a role.
 `config-utility` is the live example: several of its suites reach AWS, so its
-`vortex:test:all` is deliberately still a placeholder while `vortex:lint:all` and
-`vortex:generate:all` are plumbed.
+`vortex:test:all` is scoped to the credential-free ones (`test:all:no-vault`) and
+the vault-backed run is kept separately.
 
 ## Its inputs and secrets
 
@@ -188,10 +197,9 @@ table here would rot.
 
 There is one setting per job, named for the target it runs:
 
-|                                           |                                                     |
-| ----------------------------------------- | --------------------------------------------------- |
-| `skip-lint`, `skip-test`, `skip-generate` | default `false` — the job runs                      |
-| `skip-build`                              | default `true` — the one job most repos do not want |
+|                                           |                                |
+| ----------------------------------------- | ------------------------------ |
+| `skip-lint`, `skip-test`, `skip-generate` | default `false` — the job runs |
 
 Plus `node-version` (empty means read `.nvmrc`) and `submodules` (`recursive`).
 Read the stub for what each does.
@@ -222,7 +230,7 @@ never adding a `with:` block of your own.
    target the workflow runs is missing from `package.json`, and points at
    `vortex repo profile apply`. Advisory: the install still succeeds.
 4. **Add secrets** if the repo needs them, per the table.
-5. **Open a PR and watch the four checks run.** If one fails on first adoption,
+5. **Open a PR and watch the checks run.** If one fails on first adoption,
    that is the workflow doing its job — something in the repo was already stale,
    or a target you believed was read-only isn't.
 
