@@ -54,9 +54,9 @@ installs it before running the target — the same behaviour, and the same
 reasoning, as the verification workflow. See
 [repo-verify.md](repo-verify.md).
 
-Unlike verification, this workflow calls `vortex:build:all` **without**
-`--if-present`, so a repo that has not plumbed that target fails the release
-rather than producing an empty one. The stub declares the dependency —
+This workflow calls `vortex:build:all` **without** `--if-present` — unlike the
+`vortex:<concern>:all` targets a verification run invokes — so a repo that has not
+plumbed that target fails the release rather than producing an empty one. The stub declares the dependency —
 `# vtx:requires vortex:build:all` — so `vortex repo gha install` says something
 at install time instead of leaving it to a release.
 

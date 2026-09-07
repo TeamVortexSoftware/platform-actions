@@ -14,7 +14,7 @@
 # To stop the file being managed at all, rename it to drop the `vtx-` prefix;
 # you keep a working workflow that is then entirely your own.
 
-# vtx:requires vortex:lint:all vortex:test:all vortex:generate:all vortex:build:all
+# vtx:requires vortex:lint:all vortex:test:all vortex:generate:all
 #
 # Each is called with `pnpm run --if-present`, so a missing one does not fail the
 # run — the job goes green having verified nothing. That is why the CLI says
@@ -89,7 +89,7 @@ jobs:
         # always describes the workflow you are actually calling. Your chosen
         # values live in the block below it and are never overwritten.
         #
-        # Four jobs run against your repo, each running the matching
+        # Three jobs run against your repo, each running the matching
         # `vortex:<name>:all` script from your package.json. There is one setting
         # per job, named to match. Set it to true and that job does not run.
         #
@@ -108,14 +108,6 @@ jobs:
         #       a repo whose generators are not yet trustworthy — it is meant to
         #       go back to false.
         #
-        #   skip-build           default TRUE
-        #       Runs `vortex:build:all`, then fails if any file changed. Build
-        #       output is never committed, so anything left behind means
-        #       something is missing from .gitignore. This is the one job not
-        #       worth running everywhere, which is why it is the one skipped by
-        #       default. Turn it on where a PR should prove the thing still
-        #       builds; leave it off in a repo that does not build anything.
-        #
         #   node-version         default ""
         #       Empty means "read it from this repo's .nvmrc", which is what you
         #       almost certainly want. Put a version string here to override that.
@@ -132,7 +124,6 @@ jobs:
             skip-lint: false
             skip-test: false
             skip-generate: false
-            skip-build: true
             node-version: ""
             submodules: "recursive"
         # ---------------------------------------------------------- vtx:end ---

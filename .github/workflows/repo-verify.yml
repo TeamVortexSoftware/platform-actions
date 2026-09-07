@@ -13,14 +13,17 @@
 #   lint      vortex:lint:all
 #   test      vortex:test:all
 #   generate  vortex:generate:all
-#   build     vortex:build:all
 #
-# ONE SETTING PER JOB, named for it: skip-lint, skip-test, skip-generate,
-# skip-build. Same direction every time — true means the job does not run. Three
-# default to false and `skip-build` defaults to true, because build is the one
-# job most repos do not want; the odd one out is the default, never the name.
+# A JOB BELONGS HERE ONLY IF SOMETHING CONSUMES WHAT IT PRODUCES and turns it
+# into a verdict about this repo, keeping nothing. `generate` qualifies on that
+# test even though it writes: the writes ARE the measurement, compared against
+# the committed tree. `build` did not, which is why it is gone — see below.
 #
-# They are separate jobs rather than four steps of one so that a single run
+# ONE SETTING PER JOB, named for it: skip-lint, skip-test, skip-generate. Same
+# direction every time — true means the job does not run, and all three default
+# to false.
+#
+# They are separate jobs rather than steps of one so that a single run
 # reports everything that is wrong. Sequentially, a lint failure ends the run
 # and nobody learns whether the tests pass — you fix lint, push, and discover
 # the next failure a run later. Separate jobs also mean separate check names,
@@ -32,12 +35,24 @@
 # that concern. `lint` and `test` were always required to be read-only; this is
 # the first time it is enforced rather than documented.
 #
-# That uniformity is what lets `build` run alongside the others. It used to run
-# last, deliberately, so its uncommitted output could not be mistaken for
-# generate's drift — with one job per concern that confusion is structurally
-# impossible, since each job is its own runner with its own checkout. So build
-# is held to the same rule and finally gives an honest message when dist/ is not
-# ignored.
+# WHY THERE IS NO `build` JOB. It ran `vortex:build:all` and threw the result
+# away: nothing read what it produced, so it emitted no verdict beyond "the
+# command exited 0". That verdict was already lint's — config-utility's
+# vortex:lint:all is `tsc --noEmit`, the same error surface as its build.
+#
+# And the release-artifact verdict it appeared to give was false. This workflow
+# passed no VORTEX_BUILD_TARGET, so a repo's build script fell through to host
+# inference and built for the runner — linux-x64 — while the only target
+# config-utility publishes is darwin-arm64. It could not have told you whether
+# the artifact you ship still builds.
+#
+# Building belongs where the artifact is kept: repo-release.yml, which drives
+# vortex:build:all per matrix entry. The target itself is untouched.
+#
+# This retires the earlier reasoning here, which argued build was safe to run
+# alongside the others now that each job has its own runner. That was true and
+# beside the point: the question was never whether it was safe, but whether a
+# job that keeps nothing and is read by nothing is verifying anything.
 #
 # Every target is invoked with `pnpm run --if-present`, which exits 0 when the
 # script is undefined. The default repo profile ships every vortex:<concern>:all
@@ -86,14 +101,6 @@ on:
         type: boolean
         required: false
         default: false
-      skip-build:
-        description: >-
-          Skip the build job, which runs vortex:build:all. Skipped by default:
-          worth running where a PR should prove the artifact still builds, noise
-          where nothing is built. This is the one job most repos do not want.
-        type: boolean
-        required: false
-        default: true
     secrets:
       ssh-key:
         description: >-
@@ -177,23 +184,3 @@ jobs:
           message: >-
             vortex:generate:all changed files — a source was edited without
             regenerating. Run it locally and commit the result.
-
-  build:
-    if: ${{ !inputs.skip-build }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: TeamVortexSoftware/platform-actions/actions/setup-vortex-repo@main
-        with:
-          node-version: ${{ inputs.node-version }}
-          submodules: ${{ inputs.submodules }}
-          ssh-key: ${{ secrets.ssh-key }}
-          npm-token: ${{ secrets.npm-token }}
-
-      - name: vortex:build:all
-        run: pnpm run --if-present vortex:build:all
-
-      - uses: TeamVortexSoftware/platform-actions/actions/assert-clean-tree@main
-        with:
-          message: >-
-            vortex:build:all left files in the tree. Build output is never
-            committed — add it to .gitignore.

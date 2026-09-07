@@ -14,7 +14,7 @@ workflows are:
 
 | Workflow                                             | What it is for                                            |
 | ---------------------------------------------------- | --------------------------------------------------------- |
-| [repo-verify](workflows/repo-verify.md)              | verifying pull requests — lint, test, generate, build     |
+| [repo-verify](workflows/repo-verify.md)              | verifying pull requests — lint, test, generate            |
 | [promote-repo](workflows/promoting-to-production.md) | promoting a repo to production across the two GitHub orgs |
 | [repo-release](workflows/releasing-artifacts.md)     | releasing an artifact, and updating a Homebrew formula    |
 
@@ -90,7 +90,7 @@ install still succeeds. Today:
 
 | Workflow                                     | Declares                                                                        |
 | -------------------------------------------- | ------------------------------------------------------------------------------- |
-| [`repo-verify`](workflows/repo-verify.md)              | `vortex:lint:all` `vortex:test:all` `vortex:generate:all` `vortex:build:all`    |
+| [`repo-verify`](workflows/repo-verify.md)              | `vortex:lint:all` `vortex:test:all` `vortex:generate:all`                       |
 | [`repo-release`](workflows/releasing-artifacts.md)     | `vortex:build:all`                                                              |
 | [`promote-repo`](workflows/promoting-to-production.md) | `none` — spelled out, so a reader can tell it was decided rather than forgotten |
 

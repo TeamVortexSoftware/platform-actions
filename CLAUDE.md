@@ -87,7 +87,7 @@ as an input or a secret from the calling repo instead of writing it here.
   outside every keep block:
 
   ```
-  # vtx:requires vortex:lint:all vortex:test:all vortex:generate:all vortex:build:all
+  # vtx:requires vortex:lint:all vortex:test:all vortex:generate:all
   # vtx:requires none
   ```
 

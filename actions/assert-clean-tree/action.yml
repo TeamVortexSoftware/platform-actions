@@ -11,7 +11,6 @@
 #             fixes belong in vortex:lint:fix
 #   test      the test battery wrote into the repo; tests must leave no trace
 #   generate  a source was edited without regenerating
-#   build     build output is not gitignored; artifacts are never committed
 #
 # `git add -A` FIRST, then diff the index. `git diff` alone ignores untracked
 # paths, which is exactly how a newly generated file — the most common real
