@@ -5,7 +5,7 @@
 # package-manager guard, not a build step. Its bin entries point at prebuilt
 # `dist/`, so nothing needs compiling. Declared false: never run it.
 allowBuilds:
-  '@teamvortexsoftware/config-utility': false
+  "@teamvortexsoftware/config-utility": false
 
 # pnpm 11 quarantines any package published less than `minimumReleaseAge`
 # minutes ago (default 1440 = 24h) as a supply-chain mitigation: it will not
@@ -17,4 +17,9 @@ allowBuilds:
 # publish ourselves, where we already control the release — it only delays
 # adopting our own CLI by a day. Exempt the whole first-party scope.
 minimumReleaseAgeExclude:
-  - '@teamvortexsoftware/*'
+  - "@teamvortexsoftware/*"
+overrides:
+  hono@< 4.13.5: 4.13.5
+  fast-uri@^3.0.0: 3.1.6
+  js-yaml@^4.0.0: 4.3.2
+  qs@^6.0.0: 6.16.0
