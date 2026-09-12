@@ -7,6 +7,7 @@
   },
   "scripts": {
     "preinstall": "npx only-allow pnpm",
+    "test:dependabot": "node --test test/dependabot-contract.test.mjs && node bin/test-dependabot.mjs",
     "vortex:build:all": "echo 'produce every deployable/publishable artifact'",
     "vortex:test:all": "echo 'run the complete test battery'",
     "vortex:lint:all": "echo 'read-only correctness/style/policy checks'",

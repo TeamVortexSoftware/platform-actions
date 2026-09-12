@@ -27,6 +27,19 @@ Platform-wide context those docs assume — what the `vortex:*` script targets
 mean, why production lives in a second organization — stays in the umbrella's
 docs hub.
 
+## Dependency remediation verification
+
+The repository-owned fast gate for automated dependency changes is:
+
+```bash
+pnpm run test:dependabot
+```
+
+Run it after a frozen pnpm install. It verifies that the published
+`@teamvortexsoftware/config-utility` dependency imports and its `vortex` binary
+starts, regenerates the repository's Markdown contracts, and rejects generated
+Markdown drift.
+
 ## Workflow stubs
 
 `workflow-stubs/` holds the caller workflow each consuming repo installs. This is
