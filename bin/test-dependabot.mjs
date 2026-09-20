@@ -37,7 +37,7 @@ async function markdownSnapshot() {
 
 const before = await markdownSnapshot();
 
-run('pnpm', ['exec', 'vortex', '--version', '--no-check'], { stdio: 'inherit' });
+run('vortex', ['--version', '--no-check'], { stdio: 'inherit' });
 run('pnpm', ['run', 'vortex:generate:all'], { stdio: 'inherit' });
 
 const after = await markdownSnapshot();

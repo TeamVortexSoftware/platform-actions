@@ -35,10 +35,10 @@ The repository-owned fast gate for automated dependency changes is:
 pnpm run test:dependabot
 ```
 
-Run it after a frozen pnpm install. It verifies that the published
-`@teamvortexsoftware/config-utility` dependency imports and its `vortex` binary
-starts, regenerates the repository's Markdown contracts, and rejects generated
-Markdown drift.
+Run it after a frozen pnpm install. It verifies that the `vortex` CLI on
+PATH starts (this repo deliberately carries no copy of it in `node_modules`),
+regenerates the repository's Markdown contracts, and rejects generated Markdown
+drift.
 
 ## Workflow stubs
 
