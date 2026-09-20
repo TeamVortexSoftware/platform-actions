@@ -16,6 +16,7 @@ staying current — is in
 * [The triggers, and the draft gate](#the-triggers-and-the-draft-gate)
 * [What each target has to satisfy](#what-each-target-has-to-satisfy)
 * [When a target needs the CLI itself](#when-a-target-needs-the-cli-itself)
+* [When a target needs terraform](#when-a-target-needs-terraform)
 * [No AWS session](#no-aws-session)
 * [Its inputs and secrets](#its-inputs-and-secrets)
 * [Adopting it in a repo](#adopting-it-in-a-repo)
@@ -176,6 +177,24 @@ expecting.
 It checks before installing, so a job that already has the CLI pays nothing. It
 needs the `npm-token` secret, and fails with a clear message rather than a later
 `command not found` if the token is missing or the install lands off PATH.
+
+## When a target needs terraform
+
+Terraform is supplied the same way the CLI is: automatically, from something the
+repo already states. GitHub's runner images stopped shipping it, so a repo whose
+target shells out to it — the infra repos' `vortex:lint:all` runs `vortex tfm
+lint`, which runs `terraform fmt` — declares its minimum in `vortex.yml`:
+
+```yaml
+behavior:
+  terraform:
+    minimum_version: "1.14.3"
+```
+
+`setup-vortex-repo` asks the CLI (`vortex tfm terraform-version`) and installs
+exactly that release on every job's runner. A repo that declares nothing gets
+nothing, and there is no workflow setting for it — the version is written in one
+place, and a service repo never sees it.
 
 ## No AWS session
 
