@@ -59,6 +59,13 @@
 # as a runnable `echo` placeholder for the repo's keeper to fill in, so the
 # targets are expected to exist; --if-present is the safety net, not the design.
 #
+# TERRAFORM IS NOT. The GitHub-hosted runner images stopped shipping it, so a
+# repo whose targets shell out to terraform — the infra repos' vortex:lint:all
+# runs `vortex tfm lint`, which runs `terraform fmt` — names an exact version in
+# `terraform-version` and every job installs it. Empty, the default, installs
+# nothing. The wrapper is off so `terraform` on PATH is the real binary and its
+# exit code is the one the caller sees.
+#
 # The vortex CLI is supplied automatically. A target may shell out to a bare
 # `vortex` — vortex:generate:all in the infra repos does — and setup-vortex-repo
 # installs the CLI when the repo does not carry it as a dependency. There is no
@@ -101,6 +108,16 @@ on:
         type: boolean
         required: false
         default: false
+      terraform-version:
+        description: >-
+          Exact terraform version to install on every job's runner, e.g.
+          "1.14.3", for a repo whose targets shell out to terraform — the infra
+          repos' vortex:lint:all runs `vortex tfm lint`, which runs `terraform
+          fmt`. Empty (the default) installs nothing: the GitHub-hosted runner
+          images no longer ship terraform.
+        type: string
+        required: false
+        default: ""
     secrets:
       ssh-key:
         description: >-
@@ -136,6 +153,13 @@ jobs:
           ssh-key: ${{ secrets.ssh-key }}
           npm-token: ${{ secrets.npm-token }}
 
+      - name: Install terraform ${{ inputs.terraform-version }}
+        if: ${{ inputs.terraform-version != '' }}
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: ${{ inputs.terraform-version }}
+          terraform_wrapper: false
+
       - name: vortex:lint:all
         run: pnpm run --if-present vortex:lint:all
 
@@ -156,6 +180,13 @@ jobs:
           ssh-key: ${{ secrets.ssh-key }}
           npm-token: ${{ secrets.npm-token }}
 
+      - name: Install terraform ${{ inputs.terraform-version }}
+        if: ${{ inputs.terraform-version != '' }}
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: ${{ inputs.terraform-version }}
+          terraform_wrapper: false
+
       - name: vortex:test:all
         run: pnpm run --if-present vortex:test:all
 
@@ -175,6 +206,13 @@ jobs:
           submodules: ${{ inputs.submodules }}
           ssh-key: ${{ secrets.ssh-key }}
           npm-token: ${{ secrets.npm-token }}
+
+      - name: Install terraform ${{ inputs.terraform-version }}
+        if: ${{ inputs.terraform-version != '' }}
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: ${{ inputs.terraform-version }}
+          terraform_wrapper: false
 
       - name: vortex:generate:all
         run: pnpm run --if-present vortex:generate:all
