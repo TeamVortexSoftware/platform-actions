@@ -14,6 +14,10 @@ test('test:dependabot keeps the repository-owned verification contract', () => {
   assert.equal(packageJson.scripts['vortex:generate:all'], 'vortex markdown update .');
 });
 
-test('the published config-utility dependency imports successfully', async () => {
-  await assert.doesNotReject(import('@teamvortexsoftware/config-utility'));
+test('the vortex CLI comes from PATH, never from node_modules', async () => {
+  // The platform repos deliberately carry no config-utility dependency: a copy
+  // in node_modules shadows the real `vortex` on PATH. The gate therefore runs
+  // whatever `vortex` the environment provides, exactly as a developer does.
+  const deps = { ...packageJson.dependencies, ...packageJson.devDependencies };
+  assert.equal(deps['@teamvortexsoftware/config-utility'], undefined);
 });

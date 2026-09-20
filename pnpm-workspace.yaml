@@ -1,12 +1,3 @@
-# pnpm 11 requires an explicit decision for every dependency that ships install
-# scripts, otherwise install/upgrade fails with ERR_PNPM_IGNORED_BUILDS.
-#
-# config-utility's only install script is `preinstall: npx only-allow pnpm` — a
-# package-manager guard, not a build step. Its bin entries point at prebuilt
-# `dist/`, so nothing needs compiling. Declared false: never run it.
-allowBuilds:
-  "@teamvortexsoftware/config-utility": false
-
 # pnpm 11 quarantines any package published less than `minimumReleaseAge`
 # minutes ago (default 1440 = 24h) as a supply-chain mitigation: it will not
 # resolve to a too-new version, and it re-audits every lockfile entry on
