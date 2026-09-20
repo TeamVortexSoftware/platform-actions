@@ -117,13 +117,6 @@ jobs:
         #       submodules, and submodules inside those. Use "false" for a faster
         #       checkout in a repo with no submodules; "true" gets the top level
         #       of submodules only.
-        #
-        #   terraform-version    default ""
-        #       Exact version, e.g. "1.14.3", to install on every job's runner
-        #       when a target of yours shells out to terraform (the infra repos'
-        #       `vortex tfm lint` does). Empty installs nothing — GitHub's runner
-        #       images no longer ship it, so a target that needs it fails without
-        #       this.
         # =====================================================================
 
         # -------------------------------------------------- vtx:keep inputs ---
@@ -133,7 +126,6 @@ jobs:
             skip-generate: false
             node-version: ""
             submodules: "recursive"
-            terraform-version: ""
         # ---------------------------------------------------------- vtx:end ---
 
         # =====================================================================

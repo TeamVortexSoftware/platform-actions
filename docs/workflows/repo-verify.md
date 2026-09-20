@@ -180,12 +180,21 @@ needs the `npm-token` secret, and fails with a clear message rather than a later
 
 ## When a target needs terraform
 
-Terraform is **not** supplied automatically — the GitHub-hosted runner images
-stopped shipping it. A repo whose target shells out to it (the infra repos'
-`vortex:lint:all` runs `vortex tfm lint`, which runs `terraform fmt`) names an
-exact version in the `terraform-version` setting, and every job installs that
-version before running its target. Left empty, nothing is installed and such a
-target fails saying the binary is missing.
+Terraform is supplied the same way the CLI is: automatically, from something the
+repo already states. GitHub's runner images stopped shipping it, so a repo whose
+target shells out to it — the infra repos' `vortex:lint:all` runs `vortex tfm
+lint`, which runs `terraform fmt` — declares its minimum in `vortex.yml`:
+
+```yaml
+behavior:
+  terraform:
+    minimum_version: "1.14.3"
+```
+
+`setup-vortex-repo` asks the CLI (`vortex tfm terraform-version`) and installs
+exactly that release on every job's runner. A repo that declares nothing gets
+nothing, and there is no workflow setting for it — the version is written in one
+place, and a service repo never sees it.
 
 ## No AWS session
 
@@ -211,9 +220,8 @@ There is one setting per job, named for the target it runs:
 | ----------------------------------------- | ------------------------------ |
 | `skip-lint`, `skip-test`, `skip-generate` | default `false` — the job runs |
 
-Plus `node-version` (empty means read `.nvmrc`), `submodules` (`recursive`) and
-`terraform-version` (empty means none is installed). Read the stub for what
-each does.
+Plus `node-version` (empty means read `.nvmrc`) and `submodules` (`recursive`).
+Read the stub for what each does.
 
 | Secret      | Required when                                                                                                                                                                                                                                                                                                                                       |
 | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

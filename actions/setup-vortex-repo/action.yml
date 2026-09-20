@@ -15,6 +15,12 @@
 # from `packageManager`. A version pinned in this file would be a second opinion
 # about something the repo has already stated.
 #
+# TERRAFORM comes from the repo's own declaration. GitHub's runner images no
+# longer ship it, so a repo whose targets need it says which one in vortex.yml
+# (`behavior.terraform.minimum_version`), the CLI reports that, and the version
+# is installed here. A repo that declares nothing gets nothing. No caller
+# configures anything, and the version is written in exactly one place.
+#
 # NO AWS SESSION, deliberately — see repo-verify.yml. A composite action every
 # repo runs is the wrong place to hold a role.
 
@@ -114,3 +120,32 @@ runs:
       uses: TeamVortexSoftware/platform-actions/actions/setup-vortex-cli@main
       with:
         npm-token: ${{ inputs.npm-token }}
+
+    - name: Does the repo declare a terraform version?
+      id: terraform
+      shell: bash
+      # `vortex tfm terraform-version` prints behavior.terraform.minimum_version
+      # from vortex.yml, or nothing. A CLI that predates the command, or a repo
+      # with no vortex.yml, both come out as "nothing declared" — which is the
+      # right answer for every repo that is not a terraform repo. The repo's own
+      # CLI is asked when it has one (a plain `run:` step does not have
+      # node_modules/.bin on PATH the way `pnpm run` does), else the global one.
+      run: |
+        if [ -x node_modules/.bin/vortex ]; then cli=node_modules/.bin/vortex; else cli=vortex; fi
+        version="$("$cli" tfm terraform-version 2>/dev/null || true)"
+        version="${version##*$'\n'}"
+        if [ -n "$version" ]; then
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "the repo declares terraform $version; installing it"
+        else
+          echo "no terraform version declared; not installing one"
+        fi
+
+    - name: Setup terraform
+      if: ${{ steps.terraform.outputs.version != '' }}
+      uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+      with:
+        terraform_version: ${{ steps.terraform.outputs.version }}
+        # The wrapper would put a script named `terraform` on PATH that swallows
+        # exit codes; the targets want the real binary.
+        terraform_wrapper: false
