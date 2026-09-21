@@ -26,11 +26,15 @@ files:
   .vortex.d/skel.yml:
     merge: verbatim
     policy: enforce # a materialized snapshot of the CLI's copy; never hand-edited
+  .vortex.d/lint.yml:
+    merge: verbatim
+    policy: seed # the platform's defaults once; the values are the repo's from then on
 
 # `concern` is the middle segment of the target name. `:all` is the contract —
 # shared workflows call only vortex:<concern>:all; anything else is a repo-local leaf.
-# `mutates` says whether running the target may change committed files, which is what
-# decides if CI gates it with a dirty-tree check.
+# `mutates` says whether running the target is ALLOWED to change committed files. It
+# is a declaration, not a switch: CI gates every target with a dirty-tree check
+# regardless, and only the message differs.
 targets:
   vortex:build:all: { concern: build, mutates: true }
   vortex:test:all: { concern: test, mutates: false }
