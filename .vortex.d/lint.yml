@@ -1,18 +1,17 @@
 # yaml-language-server: $schema=https://assets.vortexsoftware.dev/schemas/json/repo/LintFile.json
 $schema: https://assets.vortexsoftware.dev/schemas/json/repo/LintFile.json
 
-# How linting is tuned for this repo — read by `vortex repo lint` and
-# `vortex tfm lint`. Installed by the repo profile with the platform's defaults;
-# the values here are this repo's own and are never overwritten by an update.
-# A comment beside a value is where you say why it is what it is.
+# How the platform's lint checks are tuned for this repo. Installed by the repo
+# profile with the platform's defaults; the values here are this repo's own and
+# are never overwritten by an update. A comment beside a value is where you say
+# why it is what it is.
+#
+# Only what a command line cannot say lives here. Which paths a check reads is
+# said where the check is invoked — this repo's package.json, e.g.
+# `vortex schema validate data`.
 
-# Directories whose yaml/json files are validated against the $schema each
-# declares. A file with no $schema is skipped; one that does not parse fails.
-schemas:
-  paths:
-    - data
-
-# Terraform repos only (a repo with state-groups/). Ignored elsewhere.
+# The terraform rules (`vortex tfm lint`). A repo with no root modules has no
+# use for this section.
 tfm:
   # Root modules no terraform rule looks at — globs relative to state-groups/.
   # An excluded root is skipped and counted, like a parked one.
