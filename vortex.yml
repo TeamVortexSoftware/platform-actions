@@ -1,0 +1,12 @@
+# yaml-language-server: $schema=https://assets.vortexsoftware.dev/schemas/json/service-config/ConfigurationFile.json
+$schema: https://assets.vortexsoftware.dev/schemas/json/service-config/ConfigurationFile.json
+
+# Platform configuration for this repo — read by the vortex CLI. This repo
+# deploys nothing and runs no terraform, so it carries the platform metadata
+# below and no 'behavior' or 'config' section.
+general:
+  # Who maintains this repo's dependency updates - the Linear user id, as an
+  # @mention writes it, without the @. up2datebot assigns the ticket it opens
+  # for each dependency-update PR to that user; absent, the ticket is created
+  # unassigned. Read with `vortex config general -p dependabot-maintainer`.
+  dependabot_maintainer_userid: jj
