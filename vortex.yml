@@ -1,8 +1,9 @@
+# yaml-language-server: $schema=https://assets.vortexsoftware.dev/schemas/json/service-config/ConfigurationFile.json
+$schema: https://assets.vortexsoftware.dev/schemas/json/service-config/ConfigurationFile.json
+
 # Platform configuration for this repo — read by the vortex CLI. This repo
-# deploys nothing and runs no terraform, so it declares no 'behavior' or
-# 'config' section. No '$schema' either, for the same reason: the published
-# ConfigurationFile schema requires both, so every non-service vortex.yml on
-# the platform omits it (see infra-data-*, infra-as-code).
+# deploys nothing and runs no terraform, so it carries the platform metadata
+# below and no 'behavior' or 'config' section.
 general:
   # Who maintains this repo's dependency updates - the Linear user id, as an
   # @mention writes it, without the @. up2datebot assigns the ticket it opens
