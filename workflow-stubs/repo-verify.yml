@@ -14,7 +14,7 @@
 # To stop the file being managed at all, rename it to drop the `vtx-` prefix;
 # you keep a working workflow that is then entirely your own.
 
-# vtx:requires vortex:lint:all vortex:test:all vortex:generate:all
+# vtx:requires vortex:lint:all vortex:test:all vortex:validate:all vortex:generate:all
 #
 # Each is called with `pnpm run --if-present`, so a missing one does not fail the
 # run — the job goes green having verified nothing. That is why the CLI says
@@ -89,7 +89,7 @@ jobs:
         # always describes the workflow you are actually calling. Your chosen
         # values live in the block below it and are never overwritten.
         #
-        # Three jobs run against your repo, each running the matching
+        # Four jobs run against your repo, each running the matching
         # `vortex:<name>:all` script from your package.json. There is one setting
         # per job, named to match. Set it to true and that job does not run.
         #
@@ -100,6 +100,13 @@ jobs:
         #       Runs `vortex:test:all`, then fails if the run left any file
         #       changed. A test battery is supposed to leave no trace — write to
         #       a temp directory, or add the output to .gitignore.
+        #
+        #   skip-validate        default false
+        #       Runs `vortex:validate:all`, which checks your data against
+        #       contracts published elsewhere, such as the platform's JSON
+        #       schemas. Its result can depend on another repo having published,
+        #       so it is reported on the pull request but is not one of the checks
+        #       a merge requires.
         #
         #   skip-generate        default false
         #       Runs `vortex:generate:all`, then fails if any file changed. That
@@ -123,6 +130,7 @@ jobs:
         with:
             skip-lint: false
             skip-test: false
+            skip-validate: false
             skip-generate: false
             node-version: ""
             submodules: "recursive"

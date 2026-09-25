@@ -40,4 +40,5 @@ targets:
   vortex:test:all: { concern: test, mutates: false }
   vortex:lint:all: { concern: lint, mutates: false }
   vortex:lint:fix: { concern: lint, mutates: true }
+  vortex:validate:all: { concern: validate, mutates: false }
   vortex:generate:all: { concern: generate, mutates: true }

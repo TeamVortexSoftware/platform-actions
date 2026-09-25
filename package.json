@@ -12,7 +12,8 @@
     "vortex:test:all": "echo 'run the complete test battery - how testing works: https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/testing.md'",
     "vortex:lint:all": "echo 'read-only correctness/style/policy checks - how linting works: https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/linting.md'",
     "vortex:lint:fix": "echo 'apply the fixes vortex:lint:all reports - how linting works: https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/linting.md'",
-    "vortex:generate:all": "vortex markdown update ."
+    "vortex:generate:all": "vortex markdown update .",
+    "vortex:validate:all": "echo 'check data against the contracts it is written to, such as published schemas - how validating works: https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/validating.md'"
   },
   "engines": {
     "node": ">=24.0.0"
