@@ -103,6 +103,11 @@ elsewhere — the JSON schemas config-utility publishes — so it can fail becau
 schema change has not been published yet, through no fault of the pull request.
 Its failure still shows on the PR.
 
+Which repositories require them is a setting on GitHub, not in this workflow: each
+repository's default-branch ruleset, managed by terraform alongside the rest of
+its GitHub settings. A required check also refuses a direct push to that branch,
+so anything that pushes directly needs a bypass on the same ruleset.
+
 Take the names from the workflow rather than from a list written down elsewhere.
 A rule naming a job that no longer reports blocks every merge, for good, and the
 set has changed before — `build` was one of these names until it was removed.
