@@ -90,7 +90,7 @@ install still succeeds. Today:
 
 | Workflow                                     | Declares                                                                        |
 | -------------------------------------------- | ------------------------------------------------------------------------------- |
-| [`repo-verify`](workflows/repo-verify.md)              | `vortex:lint:all` `vortex:test:all` `vortex:generate:all`                       |
+| [`repo-verify`](workflows/repo-verify.md)              | `vortex:lint:all` `vortex:test:all` `vortex:validate:all` `vortex:generate:all` |
 | [`repo-release`](workflows/releasing-artifacts.md)     | `vortex:build:all`                                                              |
 | [`promote-repo`](workflows/promoting-to-production.md) | `none` — spelled out, so a reader can tell it was decided rather than forgotten |
 

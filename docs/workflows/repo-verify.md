@@ -29,8 +29,8 @@ staying current — is in
 repo's PR  →  .github/workflows/vtx-repo-verify.yml   (the stub, in your repo)
                         ↓  uses:
               platform-actions/.github/workflows/repo-verify.yml   (all the logic)
-                        ↓  runs, as three concurrent jobs
-              lint            test            generate
+                        ↓  runs, as four concurrent jobs
+              lint        test        validate        generate
 ```
 
 Each job is its own runner. It checks the repo out (submodules included,
@@ -95,6 +95,14 @@ seconds, having claimed no runner. While a PR is a draft the only check on it is
 branch-protection rule must therefore require the inner job names, never
 `verify`**: a rule keyed on `verify` would be satisfied by a skipped one.
 
+**Which jobs a merge requires.** `lint`, `test` and `generate` judge only the
+pull request's own content, so they are the ones a rule should require:
+`verify / lint`, `verify / test`, `verify / generate`. **`verify / validate` is
+deliberately not required.** It checks data against contracts published
+elsewhere — the JSON schemas config-utility publishes — so it can fail because a
+schema change has not been published yet, through no fault of the pull request.
+Its failure still shows on the PR.
+
 Take the names from the workflow rather than from a list written down elsewhere.
 A rule naming a job that no longer reports blocks every merge, for good, and the
 set has changed before — `build` was one of these names until it was removed.
@@ -118,6 +126,7 @@ What this workflow additionally requires of them:
 | --------------------- | ----------------------------------------------------------------- |
 | `vortex:lint:all`     | Read-only. Must not modify the tree.                              |
 | `vortex:test:all`     | Read-only, and **must run without credentials** (see below).      |
+| `vortex:validate:all` | Read-only. Must not modify the tree.                              |
 | `vortex:generate:all` | Mutates by design; the tree must be clean afterwards.             |
 
 `vortex:build:all` is not in that list. It is a platform target still, called by
@@ -133,12 +142,13 @@ file counts as drift, not only a modified one, and `git diff` alone would ignore
 an untracked path — which is exactly how a newly generated file would slip
 through.
 
-One check, three reasons it fires:
+One check, four reasons it fires:
 
 | Job        | A dirty tree means                                                                                         |
 | ---------- | ---------------------------------------------------------------------------------------------------------- |
 | `lint`     | the target modified something. `lint` is a read-only concern — mutating fixes belong in `vortex:lint:fix`. |
 | `test`     | the test battery wrote into the repo. Write to a temp dir, or gitignore the output.                        |
+| `validate` | the target modified something. `validate` is a read-only concern — it checks data and changes nothing.     |
 | `generate` | a source was edited without regenerating. Run the target locally and commit the result.                    |
 
 The read-only concerns were always required not to modify the tree; this is the
@@ -216,9 +226,9 @@ table here would rot.
 
 There is one setting per job, named for the target it runs:
 
-|                                           |                                |
-| ----------------------------------------- | ------------------------------ |
-| `skip-lint`, `skip-test`, `skip-generate` | default `false` — the job runs |
+|                                                            |                                |
+| ---------------------------------------------------------- | ------------------------------ |
+| `skip-lint`, `skip-test`, `skip-validate`, `skip-generate` | default `false` — the job runs |
 
 Plus `node-version` (empty means read `.nvmrc`) and `submodules` (`recursive`).
 Read the stub for what each does.

@@ -12,6 +12,7 @@
 #
 #   lint      vortex:lint:all
 #   test      vortex:test:all
+#   validate  vortex:validate:all
 #   generate  vortex:generate:all
 #
 # A JOB BELONGS HERE ONLY IF SOMETHING CONSUMES WHAT IT PRODUCES and turns it
@@ -19,15 +20,25 @@
 # test even though it writes: the writes ARE the measurement, compared against
 # the committed tree. `build` did not, which is why it is gone — see below.
 #
-# ONE SETTING PER JOB, named for it: skip-lint, skip-test, skip-generate. Same
-# direction every time — true means the job does not run, and all three default
-# to false.
+# ONE SETTING PER JOB, named for it: skip-lint, skip-test, skip-validate,
+# skip-generate. Same direction every time — true means the job does not run,
+# and all four default to false.
 #
 # They are separate jobs rather than steps of one so that a single run
 # reports everything that is wrong. Sequentially, a lint failure ends the run
 # and nobody learns whether the tests pass — you fix lint, push, and discover
 # the next failure a run later. Separate jobs also mean separate check names,
 # which is what a branch-protection rule can key off.
+#
+# VALIDATE IS NOT LINT, AND IS NOT MEANT TO BLOCK A MERGE. `lint` checks the
+# repo against rules that ship with it, so its verdict depends only on the pull
+# request. `validate` checks the repo's data against contracts published
+# somewhere else — today, the JSON schemas config-utility publishes — so its
+# verdict also depends on that publish having happened. A change that adds a key
+# to a schema and uses it in a data file fails `validate` until the schema's
+# repo merges and publishes, through no fault of the data. That is why it is a
+# job of its own: a branch-protection rule can require `lint` without requiring
+# it. Its failure is still reported on the pull request.
 #
 # A DIRTY TREE FAILS THE JOB — every job, not just generate. Each one runs its
 # target and then asserts the working tree is unchanged, via the
@@ -90,6 +101,11 @@ on:
         default: false
       skip-test:
         description: "Skip the test job, which runs vortex:test:all."
+        type: boolean
+        required: false
+        default: false
+      skip-validate:
+        description: "Skip the validate job, which runs vortex:validate:all."
         type: boolean
         required: false
         default: false
@@ -164,6 +180,26 @@ jobs:
           message: >-
             vortex:test:all wrote into the repo. The test battery must leave no
             trace — write to a temp dir, or gitignore the output.
+
+  validate:
+    if: ${{ !inputs.skip-validate }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: TeamVortexSoftware/platform-actions/actions/setup-vortex-repo@main
+        with:
+          node-version: ${{ inputs.node-version }}
+          submodules: ${{ inputs.submodules }}
+          ssh-key: ${{ secrets.ssh-key }}
+          npm-token: ${{ secrets.npm-token }}
+
+      - name: vortex:validate:all
+        run: pnpm run --if-present vortex:validate:all
+
+      - uses: TeamVortexSoftware/platform-actions/actions/assert-clean-tree@main
+        with:
+          message: >-
+            vortex:validate:all modified the tree. validate is a read-only
+            concern — it checks data against a contract and changes nothing.
 
   generate:
     if: ${{ !inputs.skip-generate }}
