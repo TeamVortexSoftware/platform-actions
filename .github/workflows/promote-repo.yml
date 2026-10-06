@@ -50,7 +50,10 @@
 #
 # `lfs` stays OPT-IN. It is needed only where the repo vendors binaries through
 # LFS; without it a production checkout would have dangling pointers, and with it
-# every other repo pays for a fetch it does not need.
+# every other repo pays for a fetch it does not need. When it IS on, the mirror to
+# production runs BEFORE the branch push, because production's pre-receive hook
+# rejects a ref whose LFS objects it does not already hold. That order is an
+# invariant — reversing it breaks every promotion that carries a new LFS object.
 
 name: promote-repo
 
@@ -87,8 +90,9 @@ on:
         default: "main"
       lfs:
         description: >-
-          Mirror Git LFS objects to the production repository. Leave false
-          unless the repo actually stores binaries through LFS.
+          Mirror Git LFS objects to the production repository, before the target
+          branch is pushed there. Leave false unless the repo actually stores
+          binaries through LFS.
         type: boolean
         required: false
         default: false
@@ -300,13 +304,21 @@ jobs:
           # environment, so this push is deploy-inert.
           git push --no-verify origin "HEAD:${TARGET_BRANCH}"
 
+          if [ "${WITH_LFS}" = "true" ]; then
+            # Mirror the LFS objects to production BEFORE the branch push below.
+            # Production's pre-receive hook REJECTS a ref that references LFS
+            # objects the server does not already hold (`GH008: Your push
+            # referenced at least N unknown Git LFS objects`), and `--no-verify`
+            # skips git-lfs's pre-push auto-upload, so nothing else sends them.
+            # Pushing the branch first fails the promotion half-way: the
+            # development refs have already advanced, production has not, and no
+            # production deploy runs. Order is load-bearing, not cosmetic.
+            git lfs push --all production
+          fi
+
           # Publish to production. Authored by the PAT, so THIS push triggers
           # the production deploy workflows.
           git push --no-verify production "HEAD:${TARGET_BRANCH}"
-
-          if [ "${WITH_LFS}" = "true" ]; then
-            git lfs push --all production
-          fi
 
           echo "promoted-sha=${promoted}" >>"$GITHUB_OUTPUT"
           echo "SUCCEEDED — both target branches are now $(git rev-parse --short HEAD)"
