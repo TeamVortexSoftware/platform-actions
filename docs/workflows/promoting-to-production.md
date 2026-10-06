@@ -20,6 +20,7 @@ you dispatch  →  .github/workflows/vtx-promote-repo.yml   (the stub, in the PR
                         ↓
               FF develop → main on the DEVELOPMENT repo
               push main to the development org (origin)
+              mirror LFS objects to the PRODUCTION org   (lfs: true only)
               push main to the PRODUCTION org (production remote)
 ```
 
@@ -70,7 +71,7 @@ timestamp.
 | `prod-repo` | _required_ | Name of the production repository. |
 | `source-branch` | `develop` | Branch being promoted. |
 | `target-branch` | `main` | Branch promoted onto, in BOTH repositories. Pushing it to the production repository is what triggers the production deploys. |
-| `lfs` | `false` | Mirror Git LFS objects to the production repository. Leave false unless the repo actually stores binaries through LFS. |
+| `lfs` | `false` | Mirror Git LFS objects to the production repository, before the branch is pushed there. Leave false unless the repo actually stores binaries through LFS. |
 | `deployment-log-path` | `REPO_DEPLOYMENT_LOG.md` | Markdown log appended with one row per promotion, committed to the source branch before promoting. Set to an empty string to skip the commit. |
 | `deployment-log-description` | `""` | Optional note for the log row and commit message. Blank becomes "production deployment at <time> UTC". |
 | `commit-author` | `""` | Author of the deployment-log commit, as "Name <email>". Must be an identity the production deploy platform accepts — Vercel refuses a build whose commit author is not on its team. |
