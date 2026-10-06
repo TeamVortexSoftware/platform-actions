@@ -10,7 +10,7 @@
     "test:dependabot": "node --test test/dependabot-contract.test.mjs && node bin/test-dependabot.mjs",
     "test:promote-repo": "node --test test/promote-repo-order.test.mjs",
     "vortex:build:all": "echo 'produce every deployable/publishable artifact - how building works: https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/building.md'",
-    "vortex:test:all": "echo 'run the complete test battery - how testing works: https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/testing.md'",
+    "vortex:test:all": "node --test \"test/*.test.mjs\"",
     "vortex:lint:all": "echo 'read-only correctness/style/policy checks - how linting works: https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/linting.md'",
     "vortex:lint:fix": "echo 'apply the fixes vortex:lint:all reports - how linting works: https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/linting.md'",
     "vortex:generate:all": "vortex markdown update .",

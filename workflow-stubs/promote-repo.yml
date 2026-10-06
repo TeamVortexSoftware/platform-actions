@@ -90,8 +90,9 @@ jobs:
         #       source branch before promoting. Empty string skips the commit.
         #
         #   lfs                  default false
-        #       Mirror Git LFS objects to the production repository. Leave false
-        #       unless the repo actually stores binaries through LFS.
+        #       Mirror Git LFS objects to the production repository, before the
+        #       target branch is pushed there. Leave false unless the repo
+        #       actually stores binaries through LFS.
         #
         # A different progression is configured here, not by installing a
         # different stub.
