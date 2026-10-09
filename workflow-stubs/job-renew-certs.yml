@@ -31,7 +31,7 @@ on:
     workflow_dispatch:
         inputs:
             force:
-                description: Request an apply of the root whose certificate is due soonest, even if none is due yet
+                description: Request an apply of every root holding certificates, due or not
                 type: boolean
                 required: false
                 default: false
@@ -57,7 +57,7 @@ jobs:
         #       production.
         #
         #   bot-user             REQUIRED
-        #       GitHub user the request commit is authored as.
+        #       GitHub user the request commits are authored as.
         # =====================================================================
 
         with:

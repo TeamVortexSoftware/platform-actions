@@ -17,7 +17,7 @@ workflows are:
 | [repo-verify](workflows/repo-verify.md)              | verifying pull requests — lint, test, generate            |
 | [promote-repo](workflows/promoting-to-production.md) | promoting a repo to production across the two GitHub orgs |
 | [repo-release](workflows/releasing-artifacts.md)     | releasing an artifact, and updating a Homebrew formula    |
-| [job-renew-certs](workflows/renewing-certificates.md) | weekly: requesting renewal of Let's Encrypt certificates  |
+| [job-renew-certs](workflows/renewing-certificates.md) | weekly: requesting renewal of TLS certificates            |
 
 Adding another is adding a stub to `workflow-stubs/`, the reusable workflow it
 calls to `.github/workflows/`, and a page beside these — the contract on this

@@ -22,7 +22,7 @@ How to call what lives here — the caller stub, inputs, secrets and failure mod
 - [Releasing artifacts](docs/workflows/releasing-artifacts.md) —
   `repo-release.yml`, the shared release workflow
 - [Renewing certificates](docs/workflows/renewing-certificates.md) —
-  `job-renew-certs.yml`, the weekly Let's Encrypt renewal job
+  `job-renew-certs.yml`, the weekly certificate renewal job
 
 Platform-wide context those docs assume — what the `vortex:*` script targets
 mean, why production lives in a second organization — stays in the umbrella's
