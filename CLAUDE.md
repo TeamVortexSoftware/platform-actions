@@ -21,9 +21,8 @@ published too**: domain names, secret paths, AWS account aliases, role names,
 bucket names, internal hostnames. Those are the things that get typed into a
 workflow without a second thought, and here they are visible to anyone.
 
-This matters most for the **scheduled automation** this repo is slated to host —
-Let's Encrypt certificate issuance and renewal, and similar. That kind of
-workflow names domains and secret paths as a matter of course.
+This matters most for workflows that act on infrastructure, which name domains
+and secret paths as a matter of course.
 
 Before committing, ask what a reader outside the company learns from the file. If
 the answer includes anything about how our infrastructure is laid out, pass it in

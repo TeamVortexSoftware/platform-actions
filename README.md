@@ -2,8 +2,7 @@
 
 Shared GitHub Actions code for the Vortex platform — reusable workflows and
 composite actions called by workflows in the platform repos and the service
-repos — and the home for scheduled automation (e.g. Let's Encrypt certificate
-issuance and renewal).
+repos.
 
 Part of the [platform-repos](https://github.com/TeamVortexSoftware/platform-repos)
 umbrella, where it is incorporated as a git submodule; see that repo's `docs/`
@@ -22,6 +21,8 @@ How to call what lives here — the caller stub, inputs, secrets and failure mod
   `promote-repo.yml`, the shared two-org promotion workflow
 - [Releasing artifacts](docs/workflows/releasing-artifacts.md) —
   `repo-release.yml`, the shared release workflow
+- [Renewing certificates](docs/workflows/renewing-certificates.md) —
+  `job-renew-certs.yml`, the weekly certificate renewal job
 
 Platform-wide context those docs assume — what the `vortex:*` script targets
 mean, why production lives in a second organization — stays in the umbrella's

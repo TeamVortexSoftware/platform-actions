@@ -1,0 +1,94 @@
+# From the vortex 'job-renew-certs' workflow template. Install as vtx-job-renew-certs.yml.
+# See platform-actions/docs/workflows/renewing-certificates.md
+#
+# MANAGED BY `vortex repo gha update`. Everything outside a `vtx:keep` block
+# is refreshed from this template on every update — which is how a change here
+# reaches every repo that installed it. Inside a block the VALUES are yours.
+#
+# Which SETTINGS EXIST is not: an update reconciles the `with:` map against what
+# the called workflow declares, adding any it is missing at that workflow's own
+# default and removing any the workflow no longer declares. A setting the callee
+# does not declare is a workflow-file error, not a preference — GitHub refuses
+# the whole file over it. Your chosen values are never rewritten.
+#
+# To stop the file being managed at all, rename it to drop the `vtx-` prefix;
+# you keep a working workflow that is then entirely your own.
+
+# vtx:requires none
+#
+# This workflow works on an infra-data repo and runs nothing from the repo's
+# package.json. `none` is written out rather than left blank so a reader can
+# tell it was decided rather than forgotten.
+
+# ------------------------------------------------------------ vtx:keep name ---
+name: "[VTX] Job: Renew Certificates"
+# ------------------------------------------------------------------ vtx:end ---
+
+# -------------------------------------------------------- vtx:keep triggers ---
+on:
+    schedule:
+        - cron: "17 14 * * 1" # Mondays, 14:17 UTC
+    workflow_dispatch:
+        inputs:
+            force:
+                description: Request an apply of every root holding certificates, due or not
+                type: boolean
+                required: false
+                default: false
+# ------------------------------------------------------------------ vtx:end ---
+
+jobs:
+    job-renew-certs:
+        uses: TeamVortexSoftware/platform-actions/.github/workflows/job-renew-certs.yml@main
+
+        # =====================================================================
+        # SETTINGS — what each one does, and the value you get if you leave it
+        # out. This list is refreshed on every `vortex repo gha update`, so it
+        # always describes the workflow you are actually calling. Your chosen
+        # values live in the block below it and are never overwritten.
+        #
+        # `force` above the block comes from the dispatch form; a scheduled run
+        # never sets it.
+        #
+        #   infra-repo           REQUIRED
+        #       The infra-data repository to work on, as <owner>/<name>. Resolved
+        #       from organization variables, so the same file works in either
+        #       organization: infra-data-dev in development, infra-data-prod in
+        #       production.
+        #
+        #   bot-user             REQUIRED
+        #       GitHub user the request commits are authored as.
+        # =====================================================================
+
+        with:
+            # parameters before the vtx:keep block must not be changed
+            force: ${{ inputs.force || false }}
+            # ---------------------------------------------- vtx:keep inputs ---
+            infra-repo: ${{ vars.VTX_INFRA_DEV_GH_ORG }}/${{ vars.VTX_INFRA_ENV == 'production' && 'infra-data-prod' || 'infra-data-dev' }}
+            bot-user: ${{ vars.VTX_INFRA_ENV == 'production' && vars.VTX_INFRA_PROD_BOT_USER || vars.VTX_INFRA_DEV_BOT_USER }}
+            # ------------------------------------------------------ vtx:end ---
+
+        # =====================================================================
+        # SECRETS
+        #
+        #   ssh-key              REQUIRED
+        #       SSH key that can clone and push branches to the infra-data
+        #       repository.
+        #
+        #   bot-token            REQUIRED
+        #       Bot PAT that can open a PR on the infra-data repository. A
+        #       GITHUB_TOKEN will not do — a PR it opens does not start the
+        #       apply workflow.
+        # =====================================================================
+
+        # ------------------------------------------------- vtx:keep secrets ---
+        secrets:
+            ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
+            bot-token: ${{ vars.VTX_INFRA_ENV == 'production' && secrets.VTX_INFRA_PROD_BOT_PAT || secrets.VTX_INFRA_DEV_BOT_PAT }}
+        # ---------------------------------------------------------- vtx:end ---
+
+####   Your own jobs and edits go INSIDE the block below.  ####
+####   Anything outside it is replaced on the next update.  ####
+
+# ----------------------------------------------------------- vtx:keep extra ---
+# ------------------------------------------------------------------ vtx:end ---

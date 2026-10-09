@@ -1,0 +1,141 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+# Requests an apply of every infra-data root holding a TLS certificate that is
+# inside the renewal window. The root re-issues the certificate on that apply;
+# this workflow never touches AWS or a certificate, and knows nothing about what
+# issues one.
+#
+# A root holds certificates if its OUTPUT.json has a top-level `certificates`
+# entry (the RootCertificates schema in config-utility): each certificate's
+# `not_after`. The window is `general.certificate_renewal_days` in the repo's
+# data/core-infra/core.yml - the same value the roots renew by.
+#
+# For each due root it writes job-renew-certs.json into the root, on a branch
+# named after it (state-groups/<group>/<root>), and opens a PR - the same request
+# a service deploy makes. The infra-data repo's own apply workflow takes it from
+# there: it applies the root, commits its run-files and merges.
+#
+# Called from the vtx-job-renew-certs stub; see
+#   platform-actions/docs/workflows/renewing-certificates.md
+#
+# This repository is PUBLIC, so the infra-data repo and the bot identity come in
+# as inputs from the caller rather than being written here.
+
+name: job-renew-certs
+
+on:
+  workflow_call:
+    inputs:
+      infra-repo:
+        description: "The infra-data repository to work on, as <owner>/<name>."
+        type: string
+        required: true
+      bot-user:
+        description: "GitHub user the request commits are authored as."
+        type: string
+        required: true
+      force:
+        description: "Request an apply of every root holding certificates, due or not."
+        type: boolean
+        required: false
+        default: false
+    secrets:
+      ssh-key:
+        description: "SSH key that can clone and push branches to the infra-data repository."
+        required: true
+      bot-token:
+        description: "Bot PAT that can open a PR on the infra-data repository. A GITHUB_TOKEN will not do: a PR it opens does not start the apply workflow."
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  renew-certs:
+    runs-on: ubuntu-latest
+
+    env:
+      JOB_NAME: job-renew-certs
+      INFRA_REPO: ${{ inputs.infra-repo }}
+      BOT_USER: ${{ inputs.bot-user }}
+      FORCE: ${{ inputs.force }}
+
+    steps:
+      - name: Checkout the infra-data repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.infra-repo }}
+          ssh-key: ${{ secrets.ssh-key }}
+
+      - name: Find roots with a certificate due for renewal
+        id: find
+        run: |
+          roots=$(for output in state-groups/*/*/OUTPUT.json; do
+            jq -e 'has("certificates")' "$output" > /dev/null && echo "${output%/OUTPUT.json}"
+          done || true)
+          if [[ -z "$roots" ]]; then
+            echo "No root in $INFRA_REPO reports certificates."
+            exit 0
+          fi
+
+          days=$(yq '.general.certificate_renewal_days' data/core-infra/core.yml)
+          if ! [[ "$days" =~ ^[0-9]+$ ]]; then
+            echo "::error::general.certificate_renewal_days is not set in data/core-infra/core.yml."
+            exit 1
+          fi
+
+          now=$(date -u +%s)
+          due=()
+          for root in $roots; do
+            # The root is due when its soonest-expiring certificate is inside the window.
+            soonest=$(jq -r '[.certificates[].not_after] | sort | first' "$root/OUTPUT.json")
+            renew_from=$(( $(date -u -d "$soonest" +%s) - days * 86400 ))
+            echo "$root: renewal window opens $(date -u -d "@$renew_from" +%F)."
+            if [[ "$renew_from" -le "$now" || "$FORCE" == "true" ]]; then
+              due+=("$root")
+            fi
+          done
+
+          echo "roots=${due[*]}" >> "$GITHUB_OUTPUT"
+          [[ ${#due[@]} -eq 0 ]] && echo "Nothing is due."
+          exit 0
+
+      - name: Request an apply of each due root
+        if: steps.find.outputs.roots != ''
+        env:
+          ROOTS: ${{ steps.find.outputs.roots }}
+          GH_TOKEN: ${{ secrets.bot-token }}
+        run: |
+          base=$(git branch --show-current)
+          git config user.name "$BOT_USER"
+          git config user.email "$BOT_USER@users.noreply.github.com"
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
+          stuck=()
+          for root in $ROOTS; do
+            # The branch is the apply request. If it already exists, an apply of
+            # this root is in flight or stuck: leave it, and carry on with the rest.
+            if git ls-remote --exit-code --heads origin "$root" > /dev/null; then
+              echo "::error::Branch $root already exists in $INFRA_REPO. An apply of this root is already in progress or stuck."
+              stuck+=("$root")
+              continue
+            fi
+
+            git checkout -q "$base"
+            git checkout -q -b "$root"
+            # The commit that made the request, and the run that made it. The run
+            # makes every request a change, even from an unchanged commit.
+            jq -n --arg sha "$GITHUB_SHA" --arg run "$run_url" '{sha: $sha, run: $run}' > "$root/$JOB_NAME.json"
+            git add "$root/$JOB_NAME.json"
+            git commit -q -m "$JOB_NAME: request an apply of $root"
+            git push -q origin "$root"
+
+            gh pr create --repo "$INFRA_REPO" --base "$base" --head "$root" \
+              --title "Apply root module ${root#state-groups/}" \
+              --body "Requested by $JOB_NAME ($run_url): a certificate in this root is due for renewal."
+          done
+
+          if [[ ${#stuck[@]} -gt 0 ]]; then
+            echo "::error::Not requested, branch already exists: ${stuck[*]}"
+            exit 1
+          fi
