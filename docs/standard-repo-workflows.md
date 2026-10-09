@@ -17,6 +17,7 @@ workflows are:
 | [repo-verify](workflows/repo-verify.md)              | verifying pull requests — lint, test, generate            |
 | [promote-repo](workflows/promoting-to-production.md) | promoting a repo to production across the two GitHub orgs |
 | [repo-release](workflows/releasing-artifacts.md)     | releasing an artifact, and updating a Homebrew formula    |
+| [job-renew-certs](workflows/renewing-certificates.md) | weekly: requesting renewal of Let's Encrypt certificates  |
 
 Adding another is adding a stub to `workflow-stubs/`, the reusable workflow it
 calls to `.github/workflows/`, and a page beside these — the contract on this
@@ -93,6 +94,7 @@ install still succeeds. Today:
 | [`repo-verify`](workflows/repo-verify.md)              | `vortex:lint:all` `vortex:test:all` `vortex:validate:all` `vortex:generate:all` |
 | [`repo-release`](workflows/releasing-artifacts.md)     | `vortex:build:all`                                                              |
 | [`promote-repo`](workflows/promoting-to-production.md) | `none` — spelled out, so a reader can tell it was decided rather than forgotten |
+| [`job-renew-certs`](workflows/renewing-certificates.md) | `none` |
 
 So adopting a workflow that uses targets is two things: installing the stub,
 which is one command, and making sure the targets it calls exist and actually do
