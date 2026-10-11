@@ -77,7 +77,22 @@ runs:
         # resolved 2.1.0 while the registry's latest was 2.2.0, and put the binary
         # inside the setup-pnpm action's own tree. npm gets the current version and
         # the standard location.
-        npm install -g --ignore-scripts "${PACKAGE}@latest"
+        #
+        # Retried, with backoff, because a registry blip — or a dependency
+        # caught mid-publish — fails the install outright and takes the whole
+        # job with it.
+        attempt=1
+        max_attempts=3
+        until npm install -g --ignore-scripts "${PACKAGE}@latest"; do
+          if [ "${attempt}" -ge "${max_attempts}" ]; then
+            echo "::error::npm install of ${PACKAGE} failed ${max_attempts} times." >&2
+            exit 1
+          fi
+          delay=$((attempt * 15))
+          echo "::warning::npm install of ${PACKAGE} failed (attempt ${attempt}/${max_attempts}); retrying in ${delay}s." >&2
+          sleep "${delay}"
+          attempt=$((attempt + 1))
+        done
 
         # Assert rather than assume. A global install that lands somewhere off
         # PATH exits 0 and leaves the next step failing on "command not found",
