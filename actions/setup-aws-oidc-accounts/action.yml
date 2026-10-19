@@ -1,0 +1,100 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-action.json
+
+# Sign a job in to every AWS account its repo's GitHub Actions use, and create
+# each account's named profiles.
+#
+# The accounts and their profiles come from the repo's vortex.yml, read through
+# `vortex config general -p actions-aws-accounts` — never parsed here, so the
+# file's layout can change without touching this action. An account the repo
+# does not list is never signed in to.
+#
+# ONE ROLE PER ACCOUNT. Each account's role is the repo variable
+# ACTIONS_AWS_OIDC_ROLE__<ACCOUNT> (upper case, hyphens as underscores), and
+# every profile of that account carries it. The caller passes its variables
+# whole (`toJSON(vars)`) so that the name is worked out here, once.
+#
+# One STS call per account, not per profile: the profiles of an account share
+# one session. The exchange is done with the AWS CLI rather than
+# aws-actions/configure-aws-credentials because a composite action cannot loop
+# over a `uses:` step, and the number of accounts is the repo's to decide.
+#
+# Needs `permissions: id-token: write` on the job, and the vortex CLI and the
+# AWS CLI on PATH.
+
+name: Setup AWS OIDC accounts
+description: Sign in to each AWS account the repo's vortex.yml lists for GitHub Actions and create its profiles.
+
+inputs:
+  aws-region:
+    description: AWS region every profile is created with.
+    required: true
+  vars:
+    description: >-
+      The calling repo's Actions variables as JSON (`toJSON(vars)`). Each
+      account's role is read from ACTIONS_AWS_OIDC_ROLE__<ACCOUNT> in it.
+    required: true
+  role-session-name:
+    description: Session name the roles are assumed with.
+    required: false
+    default: github-oidc-terraform
+  duration-seconds:
+    description: How long each session lasts.
+    required: false
+    default: "3600"
+
+runs:
+  using: composite
+  steps:
+    - name: Sign in to each account and create its profiles
+      shell: bash
+      env:
+        AWS_REGION_INPUT: ${{ inputs.aws-region }}
+        REPO_VARS: ${{ inputs.vars }}
+        ROLE_SESSION_NAME: ${{ inputs.role-session-name }}
+        DURATION_SECONDS: ${{ inputs.duration-seconds }}
+      run: |
+        set -euo pipefail
+
+        if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ]; then
+          echo "::error::no GitHub OIDC token is available. The job needs 'permissions: id-token: write'." >&2
+          exit 1
+        fi
+
+        accounts=$(vortex config general -p actions-aws-accounts --no-check | jq -c .)
+        echo "AWS accounts: ${accounts}"
+
+        for account in $(jq -r 'keys[]' <<<"${accounts}"); do
+          var="ACTIONS_AWS_OIDC_ROLE__$(tr '[:lower:]-' '[:upper:]_' <<<"${account}")"
+          role=$(jq -r --arg v "${var}" '.[$v] // empty' <<<"${REPO_VARS}")
+          if [ -z "${role}" ]; then
+            echo "::error::${account} is listed in vortex.yml, but the repo variable ${var} is not set." >&2
+            exit 1
+          fi
+          echo "${account}: assuming ${role}"
+
+          token=$(curl -sSf -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | jq -r .value)
+          echo "::add-mask::${token}"
+
+          creds=$(aws sts assume-role-with-web-identity \
+            --region "${AWS_REGION_INPUT}" \
+            --role-arn "${role}" \
+            --role-session-name "${ROLE_SESSION_NAME}" \
+            --web-identity-token "${token}" \
+            --duration-seconds "${DURATION_SECONDS}" \
+            --query Credentials --output json)
+          key_id=$(jq -r .AccessKeyId <<<"${creds}")
+          secret=$(jq -r .SecretAccessKey <<<"${creds}")
+          session=$(jq -r .SessionToken <<<"${creds}")
+          echo "::add-mask::${secret}"
+          echo "::add-mask::${session}"
+
+          for profile in $(jq -r --arg a "${account}" '.[$a][]' <<<"${accounts}"); do
+            aws configure set aws_access_key_id "${key_id}" --profile "${profile}"
+            aws configure set aws_secret_access_key "${secret}" --profile "${profile}"
+            aws configure set aws_session_token "${session}" --profile "${profile}"
+            aws configure set region "${AWS_REGION_INPUT}" --profile "${profile}"
+            aws configure set output json --profile "${profile}"
+            echo "${account}: profile ${profile} is $(aws sts get-caller-identity --profile "${profile}" --query Arn --output text)"
+          done
+        done
