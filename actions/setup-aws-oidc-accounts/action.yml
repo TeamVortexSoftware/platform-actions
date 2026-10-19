@@ -29,9 +29,16 @@ inputs:
     description: AWS region every profile is created with.
     required: true
   vars:
-    description: >-
-      The calling repo's Actions variables as JSON (`toJSON(vars)`). Each
-      account's role is read from ACTIONS_AWS_OIDC_ROLE__<ACCOUNT> in it.
+    description: |
+      The calling repo's Actions variables as one flat JSON object of variable
+      name to value: pass `toJSON(vars)`. Each account's role is read from
+      ACTIONS_AWS_OIDC_ROLE__<ACCOUNT> in it; every other variable is ignored.
+      For accounts `dev` and `prod-default`:
+        {
+          "ACTIONS_AWS_OIDC_ROLE__DEV": "arn:aws:iam::111111111111:role/example-github-actions-role",
+          "ACTIONS_AWS_OIDC_ROLE__PROD_DEFAULT": "arn:aws:iam::222222222222:role/example-github-actions-role",
+          "SOME_OTHER_VARIABLE": "ignored"
+        }
     required: true
   role-session-name:
     description: Session name the roles are assumed with.
