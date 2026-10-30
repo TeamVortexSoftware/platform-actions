@@ -216,12 +216,12 @@ place, and a service repo never sees it.
 **Nothing in this workflow gets AWS credentials.** A shared workflow that every
 repo calls is the wrong place to hold a role.
 
-If a repo's test suite needs the vault, that is for the repo to solve inside its
-own target — by scoping `vortex:test:all` to the credential-free suites, or by
-keeping the vault-backed run in a separate workflow that does configure a role.
-`config-utility` is the live example: several of its suites reach AWS, so its
-`vortex:test:all` is scoped to the credential-free ones (`test:all:no-vault`) and
-the vault-backed run is kept separately.
+If a repo's test suite needs the vault, that is for the repo to solve: scope
+`vortex:test:all` to the credential-free suites, and run the vault-backed ones in
+a job of the repo's own, added to the stub's `vtx:keep extra` block, that logs in
+with the repo's `ACTIONS_AWS_OIDC_ROLE__<ACCOUNT>` role. The credentials stay on
+that one job. `config-utility` is the live example: its `vortex:test:all` is
+`test:all:no-vault`, and its stub adds a `vault-test` job for the rest.
 
 ## Its inputs and secrets
 
