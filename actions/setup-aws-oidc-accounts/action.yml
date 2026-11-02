@@ -20,7 +20,9 @@
 #   is done with the AWS CLI rather than aws-actions/configure-aws-credentials
 #   because a composite action cannot loop over a `uses:` step, and the number
 #   of accounts is the repo's to decide. Needs `permissions: id-token: write` on
-#   the job.
+#   the job. An account with an ACTIONS_AWS_TERRAFORM_ROLE__ variable but no
+#   OIDC one is skipped with a notice: it is reached only through the machine's
+#   role. An account with neither is an error.
 # - The machine's own role: ACTIONS_AWS_TERRAFORM_ROLE__<ACCOUNT>. Used only
 #   when the repo has at least one ACTIONS_AWS_TERRAFORM_ROLE__ variable AND the
 #   job's machine hands its own AWS role to jobs: a self-hosted GitHub runner on
@@ -139,6 +141,12 @@ runs:
         fi
 
         for account in $(jq -r 'keys[]' <<<"${accounts}"); do
+          # An account reached only through the machine's role: nothing to do here.
+          if [ -z "$(jq -r --arg v "$(role_var OIDC "${account}")" '.[$v] // empty' <<<"${REPO_VARS}")" ] \
+            && [ -n "$(jq -r --arg v "$(role_var TERRAFORM "${account}")" '.[$v] // empty' <<<"${REPO_VARS}")" ]; then
+            echo "::notice::${account}: skipped; it has $(role_var TERRAFORM "${account}") but no $(role_var OIDC "${account}"), so it is reached only on a GitHub runner that hands jobs its own role."
+            continue
+          fi
           role=$(account_role OIDC "${account}")
           echo "${account}: assuming ${role}"
 
