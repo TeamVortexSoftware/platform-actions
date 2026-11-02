@@ -8,21 +8,37 @@
 # file's layout can change without touching this action. An account the repo
 # does not list is never signed in to.
 #
-# ONE ROLE PER ACCOUNT. Each account's role is the repo variable
-# ACTIONS_AWS_OIDC_ROLE__<ACCOUNT> (upper case, hyphens as underscores), and
-# every profile of that account carries it. The caller passes its variables
-# whole (`toJSON(vars)`) so that the name is worked out here, once.
+# ONE ROLE PER ACCOUNT, and every profile of that account carries it. Each
+# account's role is a repo variable named for the account (upper case, hyphens
+# as underscores). The caller passes its variables whole (`toJSON(vars)`) so
+# that the name is worked out here, once. Which variable depends on where the
+# job runs:
 #
-# One STS call per account, not per profile: the profiles of an account share
-# one session. The exchange is done with the AWS CLI rather than
-# aws-actions/configure-aws-credentials because a composite action cannot loop
-# over a `uses:` step, and the number of accounts is the repo's to decide.
+# - OIDC (the default): ACTIONS_AWS_OIDC_ROLE__<ACCOUNT>. The job's GitHub OIDC
+#   token is exchanged for each account's credentials. One STS call per account,
+#   not per profile: the profiles of an account share one session. The exchange
+#   is done with the AWS CLI rather than aws-actions/configure-aws-credentials
+#   because a composite action cannot loop over a `uses:` step, and the number
+#   of accounts is the repo's to decide. Needs `permissions: id-token: write` on
+#   the job.
+# - The machine's own role: ACTIONS_AWS_TERRAFORM_ROLE__<ACCOUNT>. Used only
+#   when the repo has at least one ACTIONS_AWS_TERRAFORM_ROLE__ variable AND the
+#   job's machine hands its own AWS role to jobs: a self-hosted GitHub runner on
+#   EC2 whose instance metadata service answers the job. Each profile is written
+#   to ~/.aws/config as that account's role, taken with the machine's
+#   credentials (role_arn, credential_source = Ec2InstanceMetadata); the AWS CLI
+#   and SDKs take the role, and renew it, themselves. No OIDC token is used.
 #
-# Needs `permissions: id-token: write` on the job, and the vortex CLI and the
-# AWS CLI on PATH.
+# A repo without ACTIONS_AWS_TERRAFORM_ROLE__ variables always gets OIDC, and
+# the machine is never asked. A repo with them gets OIDC wherever the machine's
+# role is closed to jobs, which includes GitHub's own machines; it selects the
+# machine's role by running the job on a GitHub runner whose role is open.
+# The workflow's call is the same either way.
+#
+# Needs the vortex CLI, the AWS CLI, jq and curl on PATH.
 
 name: Setup AWS OIDC accounts
-description: Sign in to each AWS account the repo's vortex.yml lists for GitHub Actions and create its profiles.
+description: Sign in to each AWS account the repo's vortex.yml lists for GitHub Actions and create its profiles, through OIDC or, on a self-hosted runner that hands jobs its own AWS role, through that role.
 
 inputs:
   aws-region:
@@ -32,11 +48,13 @@ inputs:
     description: |
       The calling repo's Actions variables as one flat JSON object of variable
       name to value: pass `toJSON(vars)`. Each account's role is read from
-      ACTIONS_AWS_OIDC_ROLE__<ACCOUNT> in it; every other variable is ignored.
-      For accounts `dev` and `prod-default`:
+      ACTIONS_AWS_OIDC_ROLE__<ACCOUNT> in it, or, when the job's machine hands
+      jobs its own AWS role, from ACTIONS_AWS_TERRAFORM_ROLE__<ACCOUNT>; every
+      other variable is ignored. For accounts `dev` and `prod-default`:
         {
           "ACTIONS_AWS_OIDC_ROLE__DEV": "arn:aws:iam::111111111111:role/example-github-actions-role",
           "ACTIONS_AWS_OIDC_ROLE__PROD_DEFAULT": "arn:aws:iam::222222222222:role/example-github-actions-role",
+          "ACTIONS_AWS_TERRAFORM_ROLE__DEV": "arn:aws:iam::111111111111:role/example-terraform-role",
           "SOME_OTHER_VARIABLE": "ignored"
         }
     required: true
@@ -45,7 +63,7 @@ inputs:
     required: false
     default: github-oidc-terraform
   duration-seconds:
-    description: How long each session lasts.
+    description: How long each OIDC session lasts. The machine's role ignores it; its sessions are renewed as needed.
     required: false
     default: "3600"
 
@@ -62,21 +80,66 @@ runs:
       run: |
         set -euo pipefail
 
+        accounts=$(vortex config general -p actions-aws-accounts --no-check | jq -c .)
+        echo "AWS accounts: ${accounts}"
+
+        # ACTIONS_AWS_<TYPE>_ROLE__<ACCOUNT>: $1 the type, $2 the account.
+        role_var() { echo "ACTIONS_AWS_${1}_ROLE__$(tr '[:lower:]-' '[:upper:]_' <<<"$2")"; }
+
+        # Each account's role, from its variable. $1 the type, $2 the account.
+        account_role() {
+          local var role
+          var="$(role_var "$1" "$2")"
+          role=$(jq -r --arg v "${var}" '.[$v] // empty' <<<"${REPO_VARS}")
+          if [ -z "${role}" ]; then
+            echo "::error::$2 is listed in vortex.yml, but the repo variable ${var} is not set." >&2
+            return 1
+          fi
+          echo "${role}"
+        }
+
+        # Does the machine hand jobs its own AWS role? Asked only when the repo
+        # has a Terraform role variable, so every other caller is untouched.
+        machine_role_open() {
+          local token
+          token=$(curl -fsS --connect-timeout 2 --max-time 5 -X PUT \
+            -H "X-aws-ec2-metadata-token-ttl-seconds: 60" \
+            http://169.254.169.254/latest/api/token 2>/dev/null) || return 1
+          curl -fsS --connect-timeout 2 --max-time 5 \
+            -H "X-aws-ec2-metadata-token: ${token}" \
+            http://169.254.169.254/latest/meta-data/iam/security-credentials/ >/dev/null 2>&1
+        }
+
+        mode=oidc
+        if jq -e 'keys | any(startswith("ACTIONS_AWS_TERRAFORM_ROLE__"))' <<<"${REPO_VARS}" >/dev/null \
+          && machine_role_open; then
+          mode=machine-role
+        fi
+        echo "Signing in with: ${mode}"
+
+        if [ "${mode}" = machine-role ]; then
+          for account in $(jq -r 'keys[]' <<<"${accounts}"); do
+            role=$(account_role TERRAFORM "${account}")
+            echo "${account}: each profile takes ${role} with the machine's credentials"
+            for profile in $(jq -r --arg a "${account}" '.[$a][]' <<<"${accounts}"); do
+              aws configure set role_arn "${role}" --profile "${profile}"
+              aws configure set credential_source Ec2InstanceMetadata --profile "${profile}"
+              aws configure set role_session_name "${ROLE_SESSION_NAME}" --profile "${profile}"
+              aws configure set region "${AWS_REGION_INPUT}" --profile "${profile}"
+              aws configure set output json --profile "${profile}"
+              echo "${account}: profile ${profile} is $(aws sts get-caller-identity --profile "${profile}" --query Arn --output text)"
+            done
+          done
+          exit 0
+        fi
+
         if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ]; then
           echo "::error::no GitHub OIDC token is available. The job needs 'permissions: id-token: write'." >&2
           exit 1
         fi
 
-        accounts=$(vortex config general -p actions-aws-accounts --no-check | jq -c .)
-        echo "AWS accounts: ${accounts}"
-
         for account in $(jq -r 'keys[]' <<<"${accounts}"); do
-          var="ACTIONS_AWS_OIDC_ROLE__$(tr '[:lower:]-' '[:upper:]_' <<<"${account}")"
-          role=$(jq -r --arg v "${var}" '.[$v] // empty' <<<"${REPO_VARS}")
-          if [ -z "${role}" ]; then
-            echo "::error::${account} is listed in vortex.yml, but the repo variable ${var} is not set." >&2
-            exit 1
-          fi
+          role=$(account_role OIDC "${account}")
           echo "${account}: assuming ${role}"
 
           token=$(curl -sSf -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
