@@ -1,12 +1,9 @@
-# Deploying a service
+# Automated deployment
 
-A service repo deploys a container service with one standard workflow. It builds
+A service repo deploys a container service with the automated deployment workflow. It builds
 the service's image, pushes it to the registry, and asks the infra-data repo to
 run the new version. The infra-data repo applies the change and merges it.
 Nobody runs a deploy by hand.
-
-This is the automated deployment in the platform's SDLC: a workflow that makes
-one narrow, predefined change, checked so that it can change nothing else.
 
 ### Contents
 
@@ -48,7 +45,8 @@ The infra-data repo takes it from step 3:
 2. **The apply workflow applies the root**, which starts the new image, and
    commits the run's output files.
 3. **When the apply succeeds, the PR merges.** If it fails, the branch stays,
-   and the next deploy of that service stops until a person deals with it.
+   and the next deploy of that service stops until a person deals with it; see
+   [stuck deployments](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/stuck-deployments.md).
 
 ## What it asks of your repo
 
@@ -66,8 +64,8 @@ Once per service, in the infra-data repo:
 - **Its image repository and its place in a system**, in the system's settings
   file, for example
   [the platform system](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/systems/platform/README.md).
-- **Its deployment**: the deployment file and the root that runs it, with a
-  `deployment-version-<environment>.json` for each environment.
+- **Its deployment**: the deployment file and the root that runs it; see
+  [adding a deployment](https://github.com/TeamVortexSoftware/infra-data-dev/blob/main/docs/adding-a-deployment.md).
 
 Once per repo:
 
@@ -80,16 +78,16 @@ Once per repo:
 ## Installing it
 
 ```bash
-vortex repo gha install deploy-service   # writes .github/workflows/vtx-deploy-service.yml
+vortex repo gha install automated-deployment   # writes .github/workflows/vtx-automated-deployment.yml
 ```
 
-The stub runs on a push to the branch you deploy from. Set the branch, and for
-each service its deployment, environment, root and Dockerfile, in the stub's
-`vtx:keep` blocks. The infra-data repo, the bot identity and the registry come
+The stub runs on every push to the repo's default branch: a repo deploys from a
+single branch. For each service, set its deployment, environment, root and
+Dockerfile in the stub's `vtx:keep` blocks. The infra-data repo, the bot identity and the registry come
 from organization variables and secrets.
 
 ## Where things live
 
-- The stub: [workflow-stubs/deploy-service.yml](../../workflow-stubs/deploy-service.yml)
-- The reusable workflow: [.github/workflows/deploy-service.yml](../../.github/workflows/deploy-service.yml)
+- The stub: [workflow-stubs/automated-deployment.yml](../../workflow-stubs/automated-deployment.yml)
+- The reusable workflow: [.github/workflows/automated-deployment.yml](../../.github/workflows/automated-deployment.yml)
 - The check and the apply: the infra-data repo's apply workflow
