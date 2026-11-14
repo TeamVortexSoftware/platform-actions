@@ -1,6 +1,6 @@
-# Automated deployment
+# Container deployment
 
-A service repo deploys a container service with the automated deployment workflow. It builds
+A service repo deploys a container service with the container deployment workflow. It builds
 the service's image, pushes it to the registry, and asks the infra-data repo to
 run the new version. The infra-data repo applies the change and merges it.
 Nobody runs a deploy by hand.
@@ -84,7 +84,7 @@ Once per repo:
 ## Installing it
 
 ```bash
-vortex repo gha install automated-deployment   # writes .github/workflows/vtx-automated-deployment.yml
+vortex repo gha install container-deployment   # writes .github/workflows/vtx-container-deployment.yml
 ```
 
 The stub runs on every push to `main`. For each service, set its deployment, environment, root and
@@ -93,6 +93,6 @@ from organization variables and secrets.
 
 ## Where things live
 
-- The stub: [workflow-stubs/automated-deployment.yml](../../workflow-stubs/automated-deployment.yml)
-- The reusable workflow: [.github/workflows/automated-deployment.yml](../../.github/workflows/automated-deployment.yml)
+- The stub: [workflow-stubs/container-deployment.yml](../../workflow-stubs/container-deployment.yml)
+- The reusable workflow: [.github/workflows/container-deployment.yml](../../.github/workflows/container-deployment.yml)
 - The check and the apply: the infra-data repo's apply workflow
