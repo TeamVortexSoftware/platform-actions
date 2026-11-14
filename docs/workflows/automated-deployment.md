@@ -8,12 +8,18 @@ Nobody runs a deploy by hand.
 ### Contents
 
 <!-- vtxmd:toc from-level=2 to-level=2 -->
+* [Which repos it is for](#which-repos-it-is-for)
 * [What it does](#what-it-does)
 * [What it asks of your repo](#what-it-asks-of-your-repo)
 * [What the platform needs before the first deploy](#what-the-platform-needs-before-the-first-deploy)
 * [Installing it](#installing-it)
 * [Where things live](#where-things-live)
 <!-- vtxmd:end -->
+
+## Which repos it is for
+
+[Single-branch](https://github.com/TeamVortexSoftware/platform-repos/blob/main/open-discussions/sdlc.md#branches)
+repos: each merge to `main` deploys. It does not deploy two-branch repos.
 
 ## What it does
 
@@ -81,8 +87,7 @@ Once per repo:
 vortex repo gha install automated-deployment   # writes .github/workflows/vtx-automated-deployment.yml
 ```
 
-The stub runs on every push to the repo's default branch: a repo deploys from a
-single branch. For each service, set its deployment, environment, root and
+The stub runs on every push to `main`. For each service, set its deployment, environment, root and
 Dockerfile in the stub's `vtx:keep` blocks. The infra-data repo, the bot identity and the registry come
 from organization variables and secrets.
 
