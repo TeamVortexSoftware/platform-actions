@@ -26,9 +26,10 @@ and with a repo in one organization or both.
 
 | Branch setup | Development organization | Production organization |
 | --- | --- | --- |
-| Single branch | `main` deploys to development | `main` deploys to production |
-| Two branches | `develop` deploys to development; `main` deploys nothing | `main` deploys to production |
+| Single branch | `main` deploys to a development environment | `main` deploys to production |
+| Two branches | `develop` deploys to a development environment; `main` may deploy to another, such as `staging` | `main` deploys to production |
 
+The stub says which development environment, if any, each branch deploys to.
 In the production organization, `main` only changes when a
 [repo promotion](promoting-to-production.md) pushes it. Any other branch, and any
 pull request, deploys nothing.
@@ -122,8 +123,9 @@ organization and the branch.
 
 In the stub's `vtx:keep` blocks, set:
 
-- **The branch setup**: which branch deploys in the development organization,
-  `main` or `develop`.
+- **The branches**: in the development organization, which environment each
+  branch deploys to, if any; and which development environment production is
+  promoted from.
 - **For each service**: its name, its Dockerfile, its deployment environment
   and root in infra-data-dev, its deployment environment and root in
   infra-data-prod if it runs in production, and whether it deploys at all. That
