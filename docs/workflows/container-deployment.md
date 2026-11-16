@@ -30,6 +30,7 @@ and with a repo in one organization or both.
 | Two branches | `develop` deploys to a development environment; `main` may deploy to another, such as `staging` | `main` deploys to production |
 
 The stub says which development environment, if any, each branch deploys to.
+
 In the production organization, `main` only changes when a
 [repo promotion](promoting-to-production.md) pushes it. Any other branch, and any
 pull request, deploys nothing.
