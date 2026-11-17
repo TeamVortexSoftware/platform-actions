@@ -63,8 +63,8 @@ jobs:
         #         context     build context (default ".")
         #         build-args  object of build arguments (default {}).
         #                     NODE_VERSION always comes from .nvmrc.
-        #         deploy      false to keep a service listed but not deployed
-        #                     (default true)
+        #         deploy      false to build and push the image but not deploy
+        #                     it (default true)
         #
         #   branch-wait-minutes  REQUIRED
         #       How long to wait for an earlier request's branch in infra-data
