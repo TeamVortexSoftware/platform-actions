@@ -1,5 +1,7 @@
 # Renewing certificates
 
+**SDLC workflow:** [Automated deployment](https://github.com/TeamVortexSoftware/platform-repos/blob/main/open-discussions/sdlc.md#automated-deployment), in production.
+
 A weekly job that keeps the platform's TLS certificates from expiring. A root
 that holds certificates re-issues one on any apply inside the renewal window.
 Nothing else applies those roots on a schedule, so this job requests the apply.

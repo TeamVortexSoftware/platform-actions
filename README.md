@@ -13,15 +13,15 @@ hub for platform-wide documentation.
 How to call what lives here — the caller stub, inputs, secrets and failure modes
 — is documented beside the workflow it describes:
 
-- [Standard repo workflows](docs/standard-repo-workflows.md) — what every
-  standard workflow has in common, and how a stub is installed and kept current
+- [Workflow stubs](docs/workflows/README.md) — what every
+  workflow stub has in common, and how a stub is installed and kept current
 - [repo-verify](docs/workflows/repo-verify.md) — `repo-verify.yml`, the shared
   pull-request verification workflow
-- [Promoting a repo to production](docs/workflows/promoting-to-production.md) —
+- [Promoting a repo to production](docs/workflows/promote-repo.md) —
   `promote-repo.yml`, the shared two-org promotion workflow
-- [Releasing artifacts](docs/workflows/releasing-artifacts.md) —
+- [Releasing artifacts](docs/workflows/repo-release.md) —
   `repo-release.yml`, the shared release workflow
-- [Renewing certificates](docs/workflows/renewing-certificates.md) —
+- [Renewing certificates](docs/workflows/job-renew-certs.md) —
   `job-renew-certs.yml`, the weekly certificate renewal job
 
 Platform-wide context those docs assume — what the `vortex:*` script targets

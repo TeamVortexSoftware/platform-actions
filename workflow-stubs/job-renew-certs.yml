@@ -1,5 +1,5 @@
 # From the vortex 'job-renew-certs' workflow template. Install as vtx-job-renew-certs.yml.
-# See platform-actions/docs/workflows/renewing-certificates.md
+# See platform-actions/docs/workflows/job-renew-certs.md
 #
 # MANAGED BY `vortex repo gha update`. Everything outside a `vtx:keep` block
 # is refreshed from this template on every update — which is how a change here
