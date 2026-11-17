@@ -130,7 +130,7 @@ Once per service:
 - **Its image repository**, in the development registry, and its place in a
   system, in the system's settings file; for example
   [the platform system](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/systems/platform/README.md).
-- **Its deployment in each organization it runs in**: the deployment config file
+- **Its deployment in each organization it runs in**: the deployment file
   and the root that runs it; see
   [adding a deployment](https://github.com/TeamVortexSoftware/infra-data-dev/blob/main/docs/adding-a-deployment.md).
 - **If it runs in production**, permission for production to pull its images
