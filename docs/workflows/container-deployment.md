@@ -12,24 +12,26 @@ and with a repo in one organization or both.
 ### Contents
 
 <!-- vtxmd:toc from-level=2 to-level=2 -->
-* [Which branch deploys where](#which-branch-deploys-where)
-* [In development](#in-development)
-* [In production](#in-production)
-* [What infra-data does with the request](#what-infra-data-does-with-the-request)
-* [What it asks of your repo](#what-it-asks-of-your-repo)
-* [What the platform needs before the first deploy](#what-the-platform-needs-before-the-first-deploy)
-* [Installing it](#installing-it)
-* [Where things live](#where-things-live)
-<!-- vtxmd:end -->
+
+- [Which branch deploys where](#which-branch-deploys-where)
+- [In development](#in-development)
+- [In production](#in-production)
+- [What infra-data does with the request](#what-infra-data-does-with-the-request)
+- [What it asks of your repo](#what-it-asks-of-your-repo)
+- [What the platform needs before the first deploy](#what-the-platform-needs-before-the-first-deploy)
+- [Installing it](#installing-it)
+- [Where things live](#where-things-live)
+      <!-- vtxmd:end -->
 
 ## Which branch deploys where
 
-| Branch setup | Development organization | Production organization |
-| --- | --- | --- |
-| Single branch | `main` deploys to a development environment | `main` deploys to production |
-| Two branches | `develop` deploys to a development environment; `main` may deploy to another, such as `staging` | `main` deploys to production |
+| Branch setup  | Development organization                                                                                                                                                                                                                                                                                                  | Production organization      |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| Single branch | `main` deploys to a development environment                                                                                                                                                                                                                                                                               | `main` deploys to production |
+| Two branches  | `develop` will usually be tied to the integration deloyment environment (for Proxon, that's `develop`) and `main` to another, such as `staging`. It is not required that `main` in the development org be tied to development environment, such as with Proxon today, however it will be used as a pre-production branch. | `main` deploys to production |
 
-The stub says which development environment, if any, each branch deploys to.
+The workflow stub says which development deployment environment, if any, each
+branch deploys to.
 
 In the production organization, `main` only changes when a
 [repo promotion](promoting-to-production.md) pushes it. Any other branch, and any
@@ -49,8 +51,9 @@ pull request, deploys nothing.
     { "tag": "build-4e7a9c21", "sha": "<the full commit>" }
     ```
 
-   and opens a PR. If the file already says this, there is nothing to deploy
-   and the run ends.
+    and opens a PR. If the file already says this, there is nothing to deploy
+    and the run ends (there's nothing to commit on the terraform repo).
+
 4. **Wait.** It waits for the PR to be applied and merged, then reports which
    commit is live. If it is still waiting after 15 minutes, it fails and says
    so.
