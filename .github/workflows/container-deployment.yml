@@ -1,0 +1,274 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+# Deploys a repo's container services. In development it builds each service's
+# image, pushes it to the development registry, and asks infra-data-dev to run
+# it by changing one file, the root's deployment-version-<environment>.json, on
+# the branch state-groups/<group>/<root>. infra-data's own apply workflow takes
+# it from there: it checks the PR changes only that file, applies the root and
+# merges.
+#
+# In production it builds nothing; it copies the version development runs into
+# infra-data-prod. That half is not built yet, and a run in the production
+# organization fails saying so rather than doing anything.
+#
+# Called from the vtx-container-deployment stub; see
+#   platform-actions/docs/workflows/container-deployment.md
+#
+# This repository is PUBLIC, so the infra-data repo, the bot identity, the
+# registry and the AWS role come in as inputs from the caller.
+
+name: container-deployment
+
+on:
+  workflow_call:
+    inputs:
+      infra-env:
+        description: "The organization's infrastructure environment: development or production (the VTX_INFRA_ENV variable)."
+        type: string
+        required: true
+      branch-environments:
+        description: 'JSON object mapping a branch to the deployment environment it deploys to, e.g. {"main": "internal"}. A branch not listed deploys nothing.'
+        type: string
+        required: true
+      services:
+        description: 'JSON array, one entry per service: {"name", "dockerfile", "root", "context" (default "."), "build-args" (object, default {}), "deploy" (default true)}. "name" is the service''s image repository; "root" is its root in infra-data, as <group>/<root>.'
+        type: string
+        required: true
+      branch-wait-minutes:
+        description: "How long to wait for an earlier request's branch to clear before failing."
+        type: number
+        required: true
+      deploy-wait-minutes:
+        description: "How long to wait for the deploy to be applied and merged. 0 does not wait: the run ends once the PR is open."
+        type: number
+        required: false
+        default: 0
+      infra-repo:
+        description: "The infra-data repository to request the deploy in, as <owner>/<name>."
+        type: string
+        required: true
+      bot-user:
+        description: "GitHub user the request commits are authored as."
+        type: string
+        required: true
+      registry:
+        description: "The development registry's host, <account>.dkr.ecr.<region>.amazonaws.com."
+        type: string
+        required: true
+      aws-role:
+        description: "The AWS role the repo signs in as to push images (GitHub OIDC)."
+        type: string
+        required: true
+      aws-region:
+        description: "The registry's AWS region."
+        type: string
+        required: true
+    secrets:
+      ssh-key:
+        description: "SSH key that can clone and push branches to the infra-data repository."
+        required: true
+      bot-token:
+        description: "Bot PAT that can open a PR on the infra-data repository. A GITHUB_TOKEN will not do: a PR it opens does not start the apply workflow."
+        required: true
+      npm-token:
+        description: "Read token for the organization's private npm packages, given to the build as the secret npm_token. Optional."
+        required: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  plan:
+    name: Which services deploy
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.plan.outputs.environment }}
+      services: ${{ steps.plan.outputs.services }}
+    steps:
+      - name: Match the branch to a deployment environment
+        id: plan
+        env:
+          INFRA_ENV: ${{ inputs.infra-env }}
+          BRANCH: ${{ github.ref_name }}
+          BRANCH_ENVIRONMENTS: ${{ inputs.branch-environments }}
+          SERVICES: ${{ inputs.services }}
+        run: |
+          if [[ "$INFRA_ENV" == "production" ]]; then
+            echo "::error::Deploying in the production organization is not built yet. Nothing was deployed."
+            exit 1
+          fi
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request" || "$GITHUB_EVENT_NAME" == "pull_request_target" ]]; then
+            echo "A pull request deploys nothing."
+            echo "services=[]" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          environment=$(jq -r --arg b "$BRANCH" '.[$b] // empty' <<< "$BRANCH_ENVIRONMENTS")
+          if [[ -z "$environment" ]]; then
+            echo "Branch $BRANCH deploys to no environment. Nothing to do."
+            echo "services=[]" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          services=$(jq -c '[.[] | select(.deploy != false)
+            | {name, dockerfile, root, context: (.context // "."), "build-args": (.["build-args"] // {})}]' <<< "$SERVICES")
+          for field in name dockerfile root; do
+            if jq -e --arg f "$field" 'any(.[]; (.[$f] // "") == "")' <<< "$services" > /dev/null; then
+              echo "::error::Every service needs \"$field\"."
+              exit 1
+            fi
+          done
+          echo "Branch $BRANCH deploys to $environment: $(jq -r 'map(.name) | join(", ")' <<< "$services")"
+          echo "environment=$environment" >> "$GITHUB_OUTPUT"
+          echo "services=$services" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    name: Deploy ${{ matrix.service.name }}
+    needs: plan
+    if: needs.plan.outputs.services != '[]' && needs.plan.outputs.services != ''
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.plan.outputs.services) }}
+
+    env:
+      SERVICE: ${{ matrix.service.name }}
+      ROOT: ${{ matrix.service.root }}
+      ENVIRONMENT: ${{ needs.plan.outputs.environment }}
+      REGISTRY: ${{ inputs.registry }}
+      INFRA_REPO: ${{ inputs.infra-repo }}
+      BOT_USER: ${{ inputs.bot-user }}
+
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v4
+
+      - name: Name the image
+        run: |
+          tag="build-${GITHUB_SHA:0:8}"
+          echo "TAG=$tag" >> "$GITHUB_ENV"
+          echo "IMAGE=$REGISTRY/$SERVICE:$tag" >> "$GITHUB_ENV"
+          echo "BRANCH=state-groups/$ROOT" >> "$GITHUB_ENV"
+          echo "VERSION_FILE=state-groups/$ROOT/deployment-version-$ENVIRONMENT.json" >> "$GITHUB_ENV"
+
+      - name: Sign in to AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.aws-role }}
+          aws-region: ${{ inputs.aws-region }}
+
+      - name: Sign in to the registry
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push the image
+        env:
+          DOCKERFILE: ${{ matrix.service.dockerfile }}
+          CONTEXT: ${{ matrix.service.context }}
+          BUILD_ARGS: ${{ toJSON(matrix.service.build-args) }}
+          NPM_TOKEN: ${{ secrets.npm-token }}
+          AWS_REGION: ${{ inputs.aws-region }}
+        run: |
+          # Tags are immutable: a re-run of the same commit finds its image and
+          # pushes nothing. Any other failure to look is an error, not "absent".
+          if probe=$(aws ecr describe-images --repository-name "$SERVICE" \
+              --image-ids imageTag="$TAG" --region "$AWS_REGION" 2>&1); then
+            echo "$IMAGE is already in the registry. Nothing to build."
+            exit 0
+          elif ! grep -q ImageNotFoundException <<< "$probe"; then
+            echo "::error::Could not check the registry for $IMAGE: $probe"
+            exit 1
+          fi
+
+          args=(--build-arg "NODE_VERSION=$(cat .nvmrc)")
+          while IFS= read -r arg; do
+            [[ -n "$arg" ]] && args+=(--build-arg "$arg")
+          done < <(jq -r 'to_entries[] | "\(.key)=\(.value)"' <<< "$BUILD_ARGS")
+          if [[ -n "$NPM_TOKEN" ]]; then
+            args+=(--secret id=npm_token,env=NPM_TOKEN)
+          fi
+
+          docker build "${args[@]}" -f "$DOCKERFILE" -t "$IMAGE" "$CONTEXT"
+          docker push "$IMAGE"
+
+      - name: Checkout the infra-data repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.infra-repo }}
+          ssh-key: ${{ secrets.ssh-key }}
+          path: infra
+
+      - name: Wait for the request branch to be free
+        working-directory: infra
+        env:
+          WAIT_MINUTES: ${{ inputs.branch-wait-minutes }}
+        run: |
+          # The branch is the deploy request. If it exists, an earlier request
+          # for this root is still in flight.
+          deadline=$(( $(date +%s) + WAIT_MINUTES * 60 ))
+          while git ls-remote --exit-code --heads origin "$BRANCH" > /dev/null; do
+            if (( $(date +%s) >= deadline )); then
+              echo "::error::Branch $BRANCH in $INFRA_REPO is still there after $WAIT_MINUTES minutes. An earlier deploy of this root is stuck and needs a person: https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/stuck-deployments.md"
+              exit 1
+            fi
+            echo "Branch $BRANCH exists: an earlier request is in flight. Checking again in 15 seconds."
+            sleep 15
+          done
+
+      - name: Ask for the deploy
+        id: request
+        working-directory: infra
+        env:
+          GH_TOKEN: ${{ secrets.bot-token }}
+        run: |
+          base=$(git branch --show-current)
+          git checkout -q -b "$BRANCH"
+          if [[ ! -d "state-groups/$ROOT" ]]; then
+            echo "::error::$INFRA_REPO has no root state-groups/$ROOT."
+            exit 1
+          fi
+
+          jq -n --arg tag "$TAG" --arg sha "$GITHUB_SHA" '{tag: $tag, sha: $sha}' > "$VERSION_FILE"
+          git add "$VERSION_FILE"
+          if git diff --cached --quiet; then
+            echo "::notice::$SERVICE is already at $TAG in $ENVIRONMENT. Nothing to deploy."
+            echo "requested=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git config user.name "$BOT_USER"
+          git config user.email "$BOT_USER@users.noreply.github.com"
+          git commit -q -m "Deploy $SERVICE $TAG to $ENVIRONMENT"
+          git push -q origin "$BRANCH"
+
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          pr=$(gh pr create --repo "$INFRA_REPO" --base "$base" --head "$BRANCH" \
+            --title "Apply root module $ROOT" \
+            --body "Requested by container-deployment ($run_url): deploy $SERVICE $TAG ($GITHUB_SHA) to $ENVIRONMENT.")
+          echo "Requested: $pr"
+          echo "requested=true" >> "$GITHUB_OUTPUT"
+          echo "pr=$pr" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for the deploy
+        if: steps.request.outputs.requested == 'true' && inputs.deploy-wait-minutes > 0
+        env:
+          GH_TOKEN: ${{ secrets.bot-token }}
+          WAIT_MINUTES: ${{ inputs.deploy-wait-minutes }}
+          PR: ${{ steps.request.outputs.pr }}
+        run: |
+          deadline=$(( $(date +%s) + WAIT_MINUTES * 60 ))
+          while true; do
+            state=$(gh pr view "$PR" --json state -q .state)
+            case "$state" in
+              MERGED)
+                echo "Deployed: $SERVICE $TAG ($GITHUB_SHA) is live in $ENVIRONMENT."
+                exit 0 ;;
+              CLOSED)
+                echo "::error::The deploy PR $PR was closed without merging. Nothing was deployed."
+                exit 1 ;;
+            esac
+            if (( $(date +%s) >= deadline )); then
+              echo "::error::The deploy PR $PR has not merged after $WAIT_MINUTES minutes. See https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/stuck-deployments.md"
+              exit 1
+            fi
+            sleep 15
+          done
