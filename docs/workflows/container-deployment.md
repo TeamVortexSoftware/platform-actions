@@ -161,8 +161,9 @@ In the stub's `vtx:keep` blocks, set:
   promoted from.
 - **For each service**: its name, its Dockerfile, its deployment environment
   and root in each infra-data repo it deploys through, and whether it deploys
-  at all. That switch covers both organizations, so a service can be added
-  before it is ready to deploy.
+  at all. A service that does not deploy is still built and pushed, so its first
+  image exists before its root does. That switch covers both organizations, so a
+  service can be added before it is ready to deploy.
 - **Waiting**: how long to wait for the request branch to be free, and whether
   to wait for the deploy to finish, and for how long.
 

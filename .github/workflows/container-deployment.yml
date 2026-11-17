@@ -31,7 +31,7 @@ on:
         type: string
         required: true
       services:
-        description: 'JSON array, one entry per service: {"name", "dockerfile", "root", "context" (default "."), "build-args" (object, default {}), "deploy" (default true)}. "name" is the service''s image repository; "root" is its root in infra-data, as <group>/<root>.'
+        description: 'JSON array, one entry per service: {"name", "dockerfile", "root", "context" (default "."), "build-args" (object, default {}), "deploy" (default true; false builds and pushes the image but asks for no deploy)}. "name" is the service''s image repository; "root" is its root in infra-data, as <group>/<root>.'
         type: string
         required: true
       branch-wait-minutes:
@@ -109,8 +109,8 @@ jobs:
             echo "services=[]" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          services=$(jq -c '[.[] | select(.deploy != false)
-            | {name, dockerfile, root, context: (.context // "."), "build-args": (.["build-args"] // {})}]' <<< "$SERVICES")
+          services=$(jq -c '[.[]
+            | {name, dockerfile, root, context: (.context // "."), "build-args": (.["build-args"] // {}), deploy: (.deploy != false)}]' <<< "$SERVICES")
           for field in name dockerfile root; do
             if jq -e --arg f "$field" 'any(.[]; (.[$f] // "") == "")' <<< "$services" > /dev/null; then
               echo "::error::Every service needs \"$field\"."
@@ -191,6 +191,7 @@ jobs:
           docker push "$IMAGE"
 
       - name: Checkout the infra-data repo
+        if: matrix.service.deploy
         uses: actions/checkout@v4
         with:
           repository: ${{ inputs.infra-repo }}
@@ -198,6 +199,7 @@ jobs:
           path: infra
 
       - name: Wait for the request branch to be free
+        if: matrix.service.deploy
         working-directory: infra
         env:
           WAIT_MINUTES: ${{ inputs.branch-wait-minutes }}
@@ -215,6 +217,7 @@ jobs:
           done
 
       - name: Ask for the deploy
+        if: matrix.service.deploy
         id: request
         working-directory: infra
         env:
