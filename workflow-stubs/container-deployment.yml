@@ -1,0 +1,143 @@
+# From the vortex 'container-deployment' workflow template. Install as vtx-container-deployment.yml.
+# See platform-actions/docs/workflows/container-deployment.md
+#
+# MANAGED BY `vortex repo gha update`. Everything outside a `vtx:keep` block
+# is refreshed from this template on every update — which is how a change here
+# reaches every repo that installed it. Inside a block the VALUES are yours.
+#
+# Which SETTINGS EXIST is not: an update reconciles the `with:` map against what
+# the called workflow declares, adding any it is missing at that workflow's own
+# default and removing any the workflow no longer declares. A setting the callee
+# does not declare is a workflow-file error, not a preference — GitHub refuses
+# the whole file over it. Your chosen values are never rewritten.
+#
+# To stop the file being managed at all, rename it to drop the `vtx-` prefix;
+# you keep a working workflow that is then entirely your own.
+
+# vtx:requires none
+#
+# This workflow builds from the repo's Dockerfiles and runs nothing from its
+# package.json. `none` is written out rather than left blank so a reader can
+# tell it was decided rather than forgotten.
+
+# ------------------------------------------------------------ vtx:keep name ---
+name: "[VTX] Container Deployment"
+# ------------------------------------------------------------------ vtx:end ---
+
+# -------------------------------------------------------- vtx:keep triggers ---
+# Every branch that deploys, in either organization. Which environment each one
+# deploys to is `branch-environments` below.
+on:
+    push:
+        branches: [main]
+# ------------------------------------------------------------------ vtx:end ---
+
+jobs:
+    container-deployment:
+        uses: TeamVortexSoftware/platform-actions/.github/workflows/container-deployment.yml@main
+
+        # Signing in to AWS to push images needs an OIDC token.
+        permissions:
+            contents: read
+            id-token: write
+
+        # =====================================================================
+        # SETTINGS — what each one does, and the value you get if you leave it
+        # out. This list is refreshed on every `vortex repo gha update`, so it
+        # always describes the workflow you are actually calling. Your chosen
+        # values live in the block below it and are never overwritten.
+        #
+        # `infra-env` above the block is the organization's VTX_INFRA_ENV; it
+        # decides whether this is a development or a production run.
+        #
+        #   branch-environments  REQUIRED
+        #       JSON object: the deployment environment each branch deploys
+        #       to, e.g. {"main": "internal"}. A branch not listed deploys
+        #       nothing. Every branch listed must also be in `on.push` above.
+        #
+        #   services             REQUIRED
+        #       JSON array, one entry per service:
+        #         name        its image repository in the registry
+        #         dockerfile  path from the repo root
+        #         root        its root in infra-data, <group>/<root>
+        #         context     build context (default ".")
+        #         build-args  object of build arguments (default {}).
+        #                     NODE_VERSION always comes from .nvmrc.
+        #         deploy      false to keep a service listed but not deployed
+        #                     (default true)
+        #
+        #   branch-wait-minutes  REQUIRED
+        #       How long to wait for an earlier request's branch in infra-data
+        #       to clear before failing.
+        #
+        #   deploy-wait-minutes  default 0
+        #       How long to wait for the deploy to be applied and merged. 0
+        #       does not wait: the run ends once the PR is open.
+        #
+        #   infra-repo           REQUIRED
+        #       The infra-data repository, as <owner>/<name>. Resolved from
+        #       organization variables, so the same file works in either
+        #       organization.
+        #
+        #   bot-user             REQUIRED
+        #       GitHub user the request commits are authored as.
+        #
+        #   registry             REQUIRED
+        #       The development registry's host.
+        #
+        #   aws-role             REQUIRED
+        #       The AWS role the repo signs in as to push images. Set on the
+        #       repo once it is given access to the account's GitHub Actions
+        #       role.
+        #
+        #   aws-region           REQUIRED
+        #       The registry's AWS region.
+        # =====================================================================
+
+        with:
+            # parameters before the vtx:keep block must not be changed
+            infra-env: ${{ vars.VTX_INFRA_ENV }}
+            # ---------------------------------------------- vtx:keep inputs ---
+            branch-environments: '{"main": "internal"}'
+            services: >-
+                [
+                  {"name": "my-service", "dockerfile": "apps/my-service/Dockerfile", "root": "deployments-dev/my-service", "deploy": false}
+                ]
+            branch-wait-minutes: 10
+            deploy-wait-minutes: 0
+            infra-repo: ${{ vars.VTX_INFRA_DEV_GH_ORG }}/${{ vars.VTX_INFRA_ENV == 'production' && 'infra-data-prod' || 'infra-data-dev' }}
+            bot-user: ${{ vars.VTX_INFRA_ENV == 'production' && vars.VTX_INFRA_PROD_BOT_USER || vars.VTX_INFRA_DEV_BOT_USER }}
+            registry: ${{ vars.VTX_ECR_NAME__DEV }}
+            aws-role: ${{ vars.ACTIONS_AWS_OIDC_ROLE__DEV }}
+            aws-region: ${{ vars.VTX_PRIMARY_AWS_REGION }}
+            # ------------------------------------------------------ vtx:end ---
+
+        # =====================================================================
+        # SECRETS
+        #
+        #   ssh-key              REQUIRED
+        #       SSH key that can clone and push branches to the infra-data
+        #       repository.
+        #
+        #   bot-token            REQUIRED
+        #       Bot PAT that can open a PR on the infra-data repository. A
+        #       GITHUB_TOKEN will not do — a PR it opens does not start the
+        #       apply workflow.
+        #
+        #   npm-token            optional
+        #       Read token for the organization's private npm packages, given
+        #       to the build as the secret `npm_token`. Never in the image.
+        # =====================================================================
+
+        # ------------------------------------------------- vtx:keep secrets ---
+        secrets:
+            ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
+            bot-token: ${{ vars.VTX_INFRA_ENV == 'production' && secrets.VTX_INFRA_PROD_BOT_PAT || secrets.VTX_INFRA_DEV_BOT_PAT }}
+            npm-token: ${{ secrets.NPM_READ_TOKEN }}
+        # ---------------------------------------------------------- vtx:end ---
+
+####   Your own jobs and edits go INSIDE the block below.  ####
+####   Anything outside it is replaced on the next update.  ####
+
+# ----------------------------------------------------------- vtx:keep extra ---
+# ------------------------------------------------------------------ vtx:end ---

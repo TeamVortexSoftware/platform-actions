@@ -1,5 +1,7 @@
 # Releasing artifacts and updating a Homebrew formula
 
+**SDLC workflow:** [Internal package publish](https://github.com/TeamVortexSoftware/platform-repos/blob/main/open-discussions/sdlc.md#internal-package-publish).
+
 A repo that ships a compiled artifact calls one reusable workflow to build it,
 attach it to a GitHub Release, and point a Homebrew formula at it. The logic
 lives in `platform-actions`, so the next tool distributed this way reuses it
@@ -150,4 +152,4 @@ yours. A repo that ships artifacts but no formula clears `tap-repo`,
   fetched from here by `vortex repo gha install`, so this is the only copy
 - The target definitions: [script-targets.md](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/script-targets.md)
 - PR verification, the sibling workflow: [repo-verify.md](repo-verify.md)
-- The family contract: [standard-repo-workflows.md](../standard-repo-workflows.md)
+- The family contract: [workflow stubs](README.md)

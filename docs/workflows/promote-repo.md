@@ -1,5 +1,7 @@
 # Promoting a repo to production
 
+**SDLC workflow:** [Repo promotion](https://github.com/TeamVortexSoftware/platform-repos/blob/main/open-discussions/sdlc.md#repo-promotion).
+
 Services operating in production have copies of their repositories in a
 **separate GitHub organization**. Development deployment environments
 (`develop`, `stg`, ...) source from actions running in the development

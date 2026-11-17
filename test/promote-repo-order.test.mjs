@@ -24,7 +24,7 @@ const workflow = await readFile(
 );
 
 const doc = await readFile(
-  new URL('../docs/workflows/promoting-to-production.md', import.meta.url),
+  new URL('../docs/workflows/promote-repo.md', import.meta.url),
   'utf8',
 );
 
@@ -105,7 +105,7 @@ test('the promotion doc describes the same order as the workflow', () => {
 
   assert.ok(
     mirror < push,
-    'docs/workflows/promoting-to-production.md must list the LFS mirror before the ' +
+    'docs/workflows/promote-repo.md must list the LFS mirror before the ' +
       'push to the production org, so the doc and the workflow cannot drift.',
   );
 });

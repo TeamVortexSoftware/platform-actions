@@ -1,32 +1,35 @@
-# Standard repo workflows
+# Workflow stubs
 
-The platform comes with pre-canned workflows to simplify routine tasks, execute
+The platform comes with pre-canned GitHub Actions workflows to simplify routine tasks, execute
 common paths in our CI/CD pipelines and accommodate compliance requirements.
 Short workflow stubs are maintained in the **platform-actions** repository. These
 can be installed and updated as GitHub Actions workflow files in any repository
 using the `vortex repo gha` sub-command. They typically call reusable workflows
 that hold all the logic.
 
-**This page is the family contract** — what every standard workflow has in
+**This page is the family contract** — what every workflow stub has in
 common, and how one is installed, updated and removed. What an individual
-workflow _does_, and what it asks of your repo, is on its own page. The standard
-workflows are:
+workflow _does_, and what it asks of your repo, is on its own page, named after
+the stub. Each page also names the
+[SDLC workflow](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/platform-definitions.md)
+it carries out, if any. The workflow stubs are:
 
-| Workflow                                             | What it is for                                            |
-| ---------------------------------------------------- | --------------------------------------------------------- |
-| [repo-verify](workflows/repo-verify.md)              | verifying pull requests — lint, test, generate            |
-| [promote-repo](workflows/promoting-to-production.md) | promoting a repo to production across the two GitHub orgs |
-| [repo-release](workflows/releasing-artifacts.md)     | releasing an artifact, and updating a Homebrew formula    |
-| [job-renew-certs](workflows/renewing-certificates.md) | weekly: requesting renewal of TLS certificates            |
+| Workflow stub | What it is for | SDLC workflow |
+| --- | --- | --- |
+| [repo-verify](repo-verify.md) | verifying pull requests — lint, test, generate | none |
+| [promote-repo](promote-repo.md) | promoting a repo to production across the two GitHub orgs | [Repo promotion](https://github.com/TeamVortexSoftware/platform-repos/blob/main/open-discussions/sdlc.md#repo-promotion) |
+| [repo-release](repo-release.md) | releasing an artifact, and updating a Homebrew formula | [Internal package publish](https://github.com/TeamVortexSoftware/platform-repos/blob/main/open-discussions/sdlc.md#internal-package-publish) |
+| [job-renew-certs](job-renew-certs.md) | weekly: requesting renewal of TLS certificates | [Automated deployment](https://github.com/TeamVortexSoftware/platform-repos/blob/main/open-discussions/sdlc.md#automated-deployment), in production |
+| [container-deployment](container-deployment.md) | deploying container services, in development and production | [Automated deployment](https://github.com/TeamVortexSoftware/platform-repos/blob/main/open-discussions/sdlc.md#automated-deployment), in production |
 
 Adding another is adding a stub to `workflow-stubs/`, the reusable workflow it
-calls to `.github/workflows/`, and a page beside these — the contract on this
+calls to `.github/workflows/`, and a page beside this one, `<name>.md` — the contract on this
 page does not change except for the table above.
 
 ### Contents
 
 <!-- vtxmd:toc from-level=2 to-level=2 -->
-* [What every standard workflow is](#what-every-standard-workflow-is)
+* [What every workflow stub is](#what-every-workflow-stub-is)
 * [Script targets: the usual touch point](#script-targets-the-usual-touch-point)
 * [Installing a stub](#installing-a-stub)
 * [What is yours, and what is not](#what-is-yours-and-what-is-not)
@@ -35,7 +38,7 @@ page does not change except for the table above.
 * [Where things live](#where-things-live)
 <!-- vtxmd:end -->
 
-## What every standard workflow is
+## What every workflow stub is
 
 Two things are true of every one of them, and a third is the shape they nearly
 always take.
@@ -62,10 +65,10 @@ repo's PR / push / tag  →  .github/workflows/vtx-<name>.yml   (the stub, in yo
 
 **Those are two files in two repos, and that split is the point.** When what a
 workflow _means_ changes, this repo changes and **no consuming repo is touched**.
-A stub that held the logic itself would forfeit that, so a standard workflow
+A stub that held the logic itself would forfeit that, so a workflow stub
 delegates unless it has a reason not to.
 
-What a standard workflow **asks of your repo** is not part of the definition, and
+What a workflow stub **asks of your repo** is not part of the definition, and
 varies. The established way to ask is a script target, and most use one — but
 `promote-repo` asks for nothing in your `package.json` at all, and a workflow is
 free to bring its own tooling instead. Each workflow's page says what its own
@@ -74,10 +77,10 @@ reaching for.
 
 ## Script targets: the usual touch point
 
-Where a standard workflow does need something from your repo, the platform's
+Where a workflow stub does need something from your repo, the platform's
 answer is a **target** — a `package.json` script with a reserved name. The
 `vortex:<concern>:<action>` namespace is reserved for them, and `:all` is the
-contract: a standard workflow calls only `vortex:<concern>:all`, never a leaf.
+contract: a workflow stub calls only `vortex:<concern>:all`, never a leaf.
 
 The indirection is what lets one workflow serve the vortex CLI's repo, a
 Terraform data repo and a shared-actions repo without knowing anything about any
@@ -91,10 +94,10 @@ install still succeeds. Today:
 
 | Workflow                                     | Declares                                                                        |
 | -------------------------------------------- | ------------------------------------------------------------------------------- |
-| [`repo-verify`](workflows/repo-verify.md)              | `vortex:lint:all` `vortex:test:all` `vortex:validate:all` `vortex:generate:all` |
-| [`repo-release`](workflows/releasing-artifacts.md)     | `vortex:build:all`                                                              |
-| [`promote-repo`](workflows/promoting-to-production.md) | `none` — spelled out, so a reader can tell it was decided rather than forgotten |
-| [`job-renew-certs`](workflows/renewing-certificates.md) | `none` |
+| [`repo-verify`](repo-verify.md)              | `vortex:lint:all` `vortex:test:all` `vortex:validate:all` `vortex:generate:all` |
+| [`repo-release`](repo-release.md)     | `vortex:build:all`                                                              |
+| [`promote-repo`](promote-repo.md) | `none` — spelled out, so a reader can tell it was decided rather than forgotten |
+| [`job-renew-certs`](job-renew-certs.md) | `none` |
 
 So adopting a workflow that uses targets is two things: installing the stub,
 which is one command, and making sure the targets it calls exist and actually do
@@ -213,7 +216,7 @@ the stub already names it and goes in unedited.
 
 ## Where things live
 
-For a standard workflow named `<name>`:
+For a workflow stub named `<name>`:
 
 - The stub to install: `platform-actions/workflow-stubs/<name>.yml` — fetched
   from here by `vortex repo gha install`, so this is the only copy

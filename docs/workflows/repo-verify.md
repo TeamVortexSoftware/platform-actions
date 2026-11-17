@@ -1,12 +1,14 @@
-# repo-verify: standard PR verification
+# repo-verify: PR verification
+
+**SDLC workflow:** none. It verifies pull requests and deploys nothing.
 
 Every repo on the platform verifies its pull requests the same way: a short stub
 in the repo calls one reusable workflow that holds all the logic.
 
 This page covers `repo-verify` specifically. What it has in common with every
-other standard workflow — the stub/reusable split, keep blocks, installing and
+other workflow stub — the stub/reusable split, keep blocks, installing and
 staying current — is in
-[standard-repo-workflows.md](../standard-repo-workflows.md).
+[workflow stubs](README.md).
 
 ### Contents
 
@@ -135,7 +137,7 @@ What this workflow additionally requires of them:
 | `vortex:generate:all` | Mutates by design; the tree must be clean afterwards.             |
 
 `vortex:build:all` is not in that list. It is a platform target still, called by
-[repo-release](releasing-artifacts.md) per matrix entry — it is simply not a
+[repo-release](repo-release.md) per matrix entry — it is simply not a
 verification concern. A job belongs here only if something consumes what it
 produces and turns it into a verdict about the repo. Building and discarding
 produced no verdict beyond "the command exited 0", and that one is already
@@ -226,7 +228,7 @@ that one job. `config-utility` is the live example: its `vortex:test:all` is
 ## Its inputs and secrets
 
 All optional, and the stub is where they are documented — see
-[Inputs and secrets](../standard-repo-workflows.md#inputs-and-secrets) for why a
+[Inputs and secrets](README.md#inputs-and-secrets) for why a
 table here would rot.
 
 There is one setting per job, named for the target it runs:
@@ -278,4 +280,4 @@ never adding a `with:` block of your own.
   `platform-actions/actions/assert-clean-tree/`
 - The target definitions:
   [script-targets.md](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/script-targets.md)
-- The family contract: [standard-repo-workflows.md](../standard-repo-workflows.md)
+- The family contract: [workflow stubs](README.md)

@@ -16,7 +16,7 @@
 # there: it applies the root, commits its run-files and merges.
 #
 # Called from the vtx-job-renew-certs stub; see
-#   platform-actions/docs/workflows/renewing-certificates.md
+#   platform-actions/docs/workflows/job-renew-certs.md
 #
 # This repository is PUBLIC, so the infra-data repo and the bot identity come in
 # as inputs from the caller rather than being written here.
