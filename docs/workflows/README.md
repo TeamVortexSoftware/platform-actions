@@ -17,10 +17,10 @@ it carries out, if any. The workflow stubs are:
 | Workflow stub | What it is for | SDLC workflow |
 | --- | --- | --- |
 | [repo-verify](repo-verify.md) | verifying pull requests — lint, test, generate | none |
-| [promote-repo](promote-repo.md) | promoting a repo to production across the two GitHub orgs | [Repo promotion](https://github.com/TeamVortexSoftware/platform-repos/blob/main/open-discussions/sdlc.md#repo-promotion) |
-| [repo-release](repo-release.md) | releasing an artifact, and updating a Homebrew formula | [Internal package publish](https://github.com/TeamVortexSoftware/platform-repos/blob/main/open-discussions/sdlc.md#internal-package-publish) |
-| [job-renew-certs](job-renew-certs.md) | weekly: requesting renewal of TLS certificates | [Automated deployment](https://github.com/TeamVortexSoftware/platform-repos/blob/main/open-discussions/sdlc.md#automated-deployment), in production |
-| [container-deployment](container-deployment.md) | deploying container services, in development and production | [Automated deployment](https://github.com/TeamVortexSoftware/platform-repos/blob/main/open-discussions/sdlc.md#automated-deployment), in production |
+| [promote-repo](promote-repo.md) | promoting a repo to production across the two GitHub orgs | [Repo promotion](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/sdlc/README.md#repo-promotion) |
+| [repo-release](repo-release.md) | releasing an artifact, and updating a Homebrew formula | [Internal package publish](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/sdlc/README.md#internal-package-publish) |
+| [job-renew-certs](job-renew-certs.md) | weekly: requesting renewal of TLS certificates | [Automated deployment](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/sdlc/README.md#automated-deployment), in production |
+| [container-deployment](container-deployment.md) | deploying container services, in development and production | [Automated deployment](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/sdlc/README.md#automated-deployment), in production |
 
 Adding another is adding a stub to `workflow-stubs/`, the reusable workflow it
 calls to `.github/workflows/`, and a page beside this one, `<name>.md` — the contract on this

@@ -1,6 +1,6 @@
 # Container deployment
 
-**SDLC workflow:** [Automated deployment](https://github.com/TeamVortexSoftware/platform-repos/blob/main/open-discussions/sdlc.md#automated-deployment), in production. In development it is not an SDLC workflow.
+**SDLC workflow:** [Automated deployment](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/sdlc/README.md#automated-deployment), in production. In development it is not an SDLC workflow.
 
 A service repo deploys its container services with the container deployment
 workflow. In development it builds each service's image and asks infra-data-dev
@@ -8,7 +8,7 @@ to run it. In production it builds nothing: it asks infra-data-prod to run the
 image development is already running. Nobody runs a deploy by hand.
 
 It works with either
-[branch setup](https://github.com/TeamVortexSoftware/platform-repos/blob/main/open-discussions/sdlc.md#branches),
+[branch setup](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/sdlc/README.md#branches),
 and with a repo in one organization or both.
 
 ### Contents
@@ -85,8 +85,8 @@ image development tested; nothing is built in production.
 ### Where the controls are
 
 A production deploy has no approval of its own. It is an
-[Automated deployment](https://github.com/TeamVortexSoftware/platform-repos/blob/main/open-discussions/sdlc.md#automated-deployment), and the approval is the
-[repo promotion](https://github.com/TeamVortexSoftware/platform-repos/blob/main/open-discussions/sdlc.md#repo-promotion) that started it:
+[Automated deployment](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/sdlc/README.md#automated-deployment), and the approval is the
+[repo promotion](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/sdlc/README.md#repo-promotion) that started it:
 
 1. **A ticket** is made for the release.
 2. **The commit is recorded on the ticket.** Prepare production release, run in
@@ -100,7 +100,7 @@ A production deploy has no approval of its own. It is an
    apply and the merge.
 
 What people do at each step, and the record each step leaves, is in the
-[repo promotion](https://github.com/TeamVortexSoftware/platform-repos/blob/main/open-discussions/sdlc.md#repo-promotion) SDLC workflow.
+[repo promotion](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/sdlc/README.md#repo-promotion) SDLC workflow.
 
 ## What infra-data does with the request
 

@@ -1,6 +1,6 @@
 # Releasing artifacts and updating a Homebrew formula
 
-**SDLC workflow:** [Internal package publish](https://github.com/TeamVortexSoftware/platform-repos/blob/main/open-discussions/sdlc.md#internal-package-publish).
+**SDLC workflow:** [Internal package publish](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/sdlc/README.md#internal-package-publish).
 
 A repo that ships a compiled artifact calls one reusable workflow to build it,
 attach it to a GitHub Release, and point a Homebrew formula at it. The logic
