@@ -221,8 +221,8 @@ repo calls is the wrong place to hold a role.
 If a repo's test suite needs the vault, that is for the repo to solve: scope
 `vortex:test:all` to the credential-free suites, and run the vault-backed ones in
 a job of the repo's own, added to the stub's `vtx:keep extra` block, that logs in
-with the repo's `ACTIONS_AWS_OIDC_ROLE__<ACCOUNT>` role. The credentials stay on
-that one job. `config-utility` is the live example: its `vortex:test:all` is
+with one of the repo's `ACTIONS_AWS_<ROLE NAME>_ROLE__<ACCOUNT>` roles. The
+credentials stay on that one job. `config-utility` is the live example: its `vortex:test:all` is
 `test:all:no-vault`, and its stub adds a `vault-test` job for the rest.
 
 ## Its inputs and secrets

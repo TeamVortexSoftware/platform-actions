@@ -8,55 +8,63 @@
 # file's layout can change without touching this action. An account the repo
 # does not list is never signed in to.
 #
-# ONE ROLE PER ACCOUNT, and every profile of that account carries it. Each
-# account's role is a repo variable named for the account (upper case, hyphens
-# as underscores). The caller passes its variables whole (`toJSON(vars)`) so
-# that the name is worked out here, once. Which variable depends on where the
-# job runs:
+# THE JOB NAMES ITS ROLES; every profile of an account carries the account's
+# role. Each role ARN is a repo variable, ACTIONS_AWS_<ROLE NAME>_ROLE__<ACCOUNT>
+# (upper case, hyphens as underscores), written from the GitHub provider file:
+# a role in `oidc_roles` is signed in to directly, a role in `internal_roles`
+# only from a terraform-infra GitHub runner. The caller passes its variables
+# whole (`toJSON(vars)`) so that the name is worked out here, once.
 #
-# - OIDC (the default): ACTIONS_AWS_OIDC_ROLE__<ACCOUNT>. The job's GitHub OIDC
-#   token is exchanged for each account's credentials. One STS call per account,
-#   not per profile: the profiles of an account share one session. The exchange
-#   is done with the AWS CLI rather than aws-actions/configure-aws-credentials
-#   because a composite action cannot loop over a `uses:` step, and the number
-#   of accounts is the repo's to decide. Needs `permissions: id-token: write` on
-#   the job. An account with an ACTIONS_AWS_TERRAFORM_ROLE__ variable but no
-#   OIDC one is skipped with a notice: it is reached only through the machine's
-#   role. An account with neither is an error.
-# - The machine's own role: ACTIONS_AWS_TERRAFORM_ROLE__<ACCOUNT>. Used only
-#   when the repo has at least one ACTIONS_AWS_TERRAFORM_ROLE__ variable AND the
-#   job's machine hands its own AWS role to jobs: a self-hosted GitHub runner on
-#   EC2 whose instance metadata service answers the job. Each profile is written
-#   to ~/.aws/config as that account's role, taken with the machine's
-#   credentials (role_arn, credential_source = Ec2InstanceMetadata); the AWS CLI
-#   and SDKs take the role, and renew it, themselves. No OIDC token is used.
+# - `oidc-role` (the default path): ACTIONS_AWS_<OIDC-ROLE>_ROLE__<ACCOUNT>. The
+#   job's GitHub OIDC token is exchanged for each account's credentials. One STS
+#   call per account, not per profile: the profiles of an account share one
+#   session. The exchange is done with the AWS CLI rather than
+#   aws-actions/configure-aws-credentials because a composite action cannot loop
+#   over a `uses:` step, and the number of accounts is the repo's to decide.
+#   Needs `permissions: id-token: write` on the job. An account with the
+#   internal role's variable but not the OIDC role's is skipped with a notice:
+#   it is reached only through the machine's role. An account with neither is an
+#   error.
+# - `internal-role`: ACTIONS_AWS_<INTERNAL-ROLE>_ROLE__<ACCOUNT>. Used only when
+#   it is given AND the job's machine hands its own AWS role to jobs: a
+#   self-hosted GitHub runner on EC2 whose instance metadata service answers the
+#   job. Each profile is written to ~/.aws/config as that account's role, taken
+#   with the machine's credentials (role_arn, credential_source =
+#   Ec2InstanceMetadata); the AWS CLI and SDKs take the role, and renew it,
+#   themselves. No OIDC token is used.
 #
-# A repo without ACTIONS_AWS_TERRAFORM_ROLE__ variables always gets OIDC, and
-# the machine is never asked. A repo with them gets OIDC wherever the machine's
-# role is closed to jobs, which includes GitHub's own machines; it selects the
-# machine's role by running the job on a GitHub runner whose role is open.
-# The workflow's call is the same either way.
+# A job without `internal-role` always gets OIDC, and the machine is never
+# asked. A job with it gets OIDC wherever the machine's role is closed to jobs,
+# which includes GitHub's own machines; the workflow's call is the same either
+# way.
 #
 # Needs the vortex CLI, the AWS CLI, jq and curl on PATH.
 
 name: Setup AWS OIDC accounts
-description: Sign in to each AWS account the repo's vortex.yml lists for GitHub Actions and create its profiles, through OIDC or, on a self-hosted runner that hands jobs its own AWS role, through that role.
+description: Sign in to each AWS account the repo's vortex.yml lists for GitHub Actions and create its profiles, with the job's named OIDC role or, on a self-hosted runner that hands jobs its own AWS role, its named internal role.
 
 inputs:
+  oidc-role:
+    description: Name of the role, from the GitHub provider file's `oidc_roles`, the job signs in to directly. Its ARN in each account is read from ACTIONS_AWS_<OIDC-ROLE>_ROLE__<ACCOUNT>.
+    required: true
+  internal-role:
+    description: Name of the role, from the GitHub provider file's `internal_roles`, taken with the machine's own role on a GitHub runner that hands jobs its role. Its ARN in each account is read from ACTIONS_AWS_<INTERNAL-ROLE>_ROLE__<ACCOUNT>. Leave empty for a job that never runs there.
+    required: false
+    default: ""
   aws-region:
     description: AWS region every profile is created with.
     required: true
   vars:
     description: |
       The calling repo's Actions variables as one flat JSON object of variable
-      name to value: pass `toJSON(vars)`. Each account's role is read from
-      ACTIONS_AWS_OIDC_ROLE__<ACCOUNT> in it, or, when the job's machine hands
-      jobs its own AWS role, from ACTIONS_AWS_TERRAFORM_ROLE__<ACCOUNT>; every
-      other variable is ignored. For accounts `dev` and `prod-default`:
+      name to value: pass `toJSON(vars)`. Only the role variables named by
+      `oidc-role` and `internal-role` are read; every other variable is
+      ignored. For `oidc-role: platform`, `internal-role: terraform` and
+      accounts `dev` and `mgmt`:
         {
-          "ACTIONS_AWS_OIDC_ROLE__DEV": "arn:aws:iam::111111111111:role/example-github-actions-role",
-          "ACTIONS_AWS_OIDC_ROLE__PROD_DEFAULT": "arn:aws:iam::222222222222:role/example-github-actions-role",
+          "ACTIONS_AWS_PLATFORM_ROLE__DEV": "arn:aws:iam::111111111111:role/example-github-platform-role",
           "ACTIONS_AWS_TERRAFORM_ROLE__DEV": "arn:aws:iam::111111111111:role/example-terraform-role",
+          "ACTIONS_AWS_TERRAFORM_ROLE__MGMT": "arn:aws:iam::222222222222:role/example-terraform-role",
           "SOME_OTHER_VARIABLE": "ignored"
         }
     required: true
@@ -75,6 +83,8 @@ runs:
     - name: Sign in to each account and create its profiles
       shell: bash
       env:
+        OIDC_ROLE: ${{ inputs.oidc-role }}
+        INTERNAL_ROLE: ${{ inputs.internal-role }}
         AWS_REGION_INPUT: ${{ inputs.aws-region }}
         REPO_VARS: ${{ inputs.vars }}
         ROLE_SESSION_NAME: ${{ inputs.role-session-name }}
@@ -85,10 +95,12 @@ runs:
         accounts=$(vortex config general -p actions-aws-accounts --no-check | jq -c .)
         echo "AWS accounts: ${accounts}"
 
-        # ACTIONS_AWS_<TYPE>_ROLE__<ACCOUNT>: $1 the type, $2 the account.
-        role_var() { echo "ACTIONS_AWS_${1}_ROLE__$(tr '[:lower:]-' '[:upper:]_' <<<"$2")"; }
+        # ACTIONS_AWS_<ROLE NAME>_ROLE__<ACCOUNT>: $1 the role name, $2 the account.
+        upper() { tr '[:lower:]-' '[:upper:]_' <<<"$1"; }
+        role_var() { echo "ACTIONS_AWS_$(upper "$1")_ROLE__$(upper "$2")"; }
+        has_var() { [ -n "$(jq -r --arg v "$(role_var "$1" "$2")" '.[$v] // empty' <<<"${REPO_VARS}")" ]; }
 
-        # Each account's role, from its variable. $1 the type, $2 the account.
+        # Each account's role, from its variable. $1 the role name, $2 the account.
         account_role() {
           local var role
           var="$(role_var "$1" "$2")"
@@ -100,8 +112,8 @@ runs:
           echo "${role}"
         }
 
-        # Does the machine hand jobs its own AWS role? Asked only when the repo
-        # has a Terraform role variable, so every other caller is untouched.
+        # Does the machine hand jobs its own AWS role? Asked only when the job
+        # names an internal role, so every other caller is untouched.
         machine_role_open() {
           local token
           token=$(curl -fsS --connect-timeout 2 --max-time 5 -X PUT \
@@ -113,15 +125,14 @@ runs:
         }
 
         mode=oidc
-        if jq -e 'keys | any(startswith("ACTIONS_AWS_TERRAFORM_ROLE__"))' <<<"${REPO_VARS}" >/dev/null \
-          && machine_role_open; then
+        if [ -n "${INTERNAL_ROLE}" ] && machine_role_open; then
           mode=machine-role
         fi
         echo "Signing in with: ${mode}"
 
         if [ "${mode}" = machine-role ]; then
           for account in $(jq -r 'keys[]' <<<"${accounts}"); do
-            role=$(account_role TERRAFORM "${account}")
+            role=$(account_role "${INTERNAL_ROLE}" "${account}")
             echo "${account}: each profile takes ${role} with the machine's credentials"
             for profile in $(jq -r --arg a "${account}" '.[$a][]' <<<"${accounts}"); do
               aws configure set role_arn "${role}" --profile "${profile}"
@@ -142,12 +153,12 @@ runs:
 
         for account in $(jq -r 'keys[]' <<<"${accounts}"); do
           # An account reached only through the machine's role: nothing to do here.
-          if [ -z "$(jq -r --arg v "$(role_var OIDC "${account}")" '.[$v] // empty' <<<"${REPO_VARS}")" ] \
-            && [ -n "$(jq -r --arg v "$(role_var TERRAFORM "${account}")" '.[$v] // empty' <<<"${REPO_VARS}")" ]; then
-            echo "::notice::${account}: skipped; it has $(role_var TERRAFORM "${account}") but no $(role_var OIDC "${account}"), so it is reached only on a GitHub runner that hands jobs its own role."
+          if ! has_var "${OIDC_ROLE}" "${account}" \
+            && [ -n "${INTERNAL_ROLE}" ] && has_var "${INTERNAL_ROLE}" "${account}"; then
+            echo "::notice::${account}: skipped; it has $(role_var "${INTERNAL_ROLE}" "${account}") but no $(role_var "${OIDC_ROLE}" "${account}"), so it is reached only on a GitHub runner that hands jobs its own role."
             continue
           fi
-          role=$(account_role OIDC "${account}")
+          role=$(account_role "${OIDC_ROLE}" "${account}")
           echo "${account}: assuming ${role}"
 
           token=$(curl -sSf -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
