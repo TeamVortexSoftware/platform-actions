@@ -29,6 +29,25 @@ files:
   .vortex.d/lint.yml:
     merge: verbatim
     policy: seed # the platform's defaults once; the values are the repo's from then on
+  # The platform's skills. `enforce`: every apply overwrites them, so don't edit them.
+  .claude/skills/vortex/SKILL.md:
+    merge: verbatim
+    policy: enforce
+  .claude/skills/vortex-tkt-do/SKILL.md:
+    merge: verbatim
+    policy: enforce
+  .claude/skills/vortex-tkt-finish/SKILL.md:
+    merge: verbatim
+    policy: enforce
+  .claude/skills/vortex-tkt-status/SKILL.md:
+    merge: verbatim
+    policy: enforce
+
+# Directories the profile owns outright. Apply deletes any directory matching one of
+# these patterns that no entry under files: ships into. Nothing outside them is touched.
+owns:
+  - .claude/skills/vortex/
+  - .claude/skills/vortex-*/
 
 # `concern` is the middle segment of the target name. `:all` is the contract —
 # shared workflows call only vortex:<concern>:all; anything else is a repo-local leaf.
