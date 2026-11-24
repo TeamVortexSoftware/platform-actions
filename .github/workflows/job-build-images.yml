@@ -1,0 +1,108 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+# Builds the platform's machine images: `vortex aws images build --execute`
+# over every image file in the calling infra-data repo. For each image's newest
+# release not yet built, the command builds a copy on a temporary machine, scans
+# it, labels it good, shares it, and deletes old copies. All of it happens in
+# the account the command's settings name; this workflow only signs in and runs
+# it.
+#
+# When the run built at least one copy, it starts the repo's
+# vtx-job-apply-images.yml, which requests an apply of every root whose machines
+# use a built image.
+#
+# Runs on one of our own GitHub runners, named by the caller: the temporary
+# machines admit SSH only from our GitHub runners' addresses.
+#
+# Called from the vtx-job-build-images stub; see
+#   platform-actions/docs/workflows/job-build-images.md
+#
+# This repository is PUBLIC, so the runner, the role and the accounts come in
+# as inputs from the caller rather than being written here.
+
+name: job-build-images
+
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        description: "Label of the GitHub runner the job runs on. One of our own: the temporary machines admit SSH only from them."
+        type: string
+        required: true
+      oidc-role:
+        description: "Name of the role, from the GitHub provider file's `oidc_roles`, the job signs in with."
+        type: string
+        required: true
+      aws-accounts:
+        description: "Space-separated names of the accounts the job signs in to, each listed in the repo's vortex.yml."
+        type: string
+        required: true
+      aws-region:
+        description: "AWS region the job's AWS profiles are created with."
+        type: string
+        required: true
+    secrets:
+      npm-token:
+        description: "npm token that can read the vortex CLI's package."
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-images:
+    runs-on: ${{ inputs.runs-on }}
+
+    permissions:
+      contents: read
+      id-token: write # the AWS sign-in
+      actions: write # starting vtx-job-apply-images.yml
+
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v4
+
+      - name: Install node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Setup vortex CLI
+        uses: TeamVortexSoftware/platform-actions/actions/setup-vortex-cli@main
+        with:
+          npm-token: ${{ secrets.npm-token }}
+
+      - name: Sign in to AWS
+        uses: TeamVortexSoftware/platform-actions/actions/setup-aws-oidc-accounts@main
+        with:
+          oidc-role: ${{ inputs.oidc-role }}
+          include-aws-accounts: ${{ inputs.aws-accounts }}
+          aws-region: ${{ inputs.aws-region }}
+          vars: ${{ toJSON(vars) }}
+          role-session-name: job-build-images
+
+      - name: Install Packer
+        uses: hashicorp/setup-packer@ce93c3c08a6c2ff2275bf4b54ff0d9a75f6c9789 # v3.4.0
+
+      - name: Build the images
+        id: build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set +e -o pipefail
+          vortex aws images build --ops --execute 2>&1 | tee build.log
+          status=$?
+          # The command's last line: "built N, already built N, failed N, deleted N".
+          built=$(sed -n 's/^built \([0-9][0-9]*\), .*/\1/p' build.log | tail -1)
+          echo "built=${built:-0}" >> "$GITHUB_OUTPUT"
+          exit "$status"
+
+      # Runs even when one image failed, so the copies that were built still
+      # reach the machines.
+      - name: Start the apply job
+        if: ${{ !cancelled() && steps.build.outputs.built != '' && steps.build.outputs.built != '0' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run vtx-job-apply-images.yml --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_REF_NAME"
+          echo "Started vtx-job-apply-images.yml in $GITHUB_REPOSITORY: ${{ steps.build.outputs.built }} new copies."
