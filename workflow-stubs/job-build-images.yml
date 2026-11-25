@@ -79,7 +79,7 @@ jobs:
 
         # ------------------------------------------------- vtx:keep secrets ---
         secrets:
-            npm-token: ${{ secrets.NPM_TOKEN }}
+            npm-token: ${{ secrets.NPM_READ_TOKEN }}
         # ---------------------------------------------------------- vtx:end ---
 
 ####   Your own jobs and edits go INSIDE the block below.  ####
