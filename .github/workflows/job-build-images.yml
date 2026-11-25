@@ -80,6 +80,8 @@ jobs:
           aws-region: ${{ inputs.aws-region }}
           vars: ${{ toJSON(vars) }}
           role-session-name: job-build-images
+          # A build runs longer than an hour. The images role allows up to 4 hours.
+          duration-seconds: "14400"
 
       - name: Install Packer
         uses: hashicorp/setup-packer@ce93c3c08a6c2ff2275bf4b54ff0d9a75f6c9789 # v3.4.0
