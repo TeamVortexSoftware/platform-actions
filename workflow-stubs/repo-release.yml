@@ -127,17 +127,12 @@ jobs:
         #       Needed if your repo installs any @teamvortexsoftware package, and
         #       whenever the vortex CLI itself has to be fetched — which happens
         #       automatically when the repo does not carry it as a dependency.
-        #
-        #       NOTE the installed value is NPM_TOKEN, which exists on only two
-        #       repos; everywhere else it resolves to nothing and the CLI is not
-        #       installed. If your build shells out to a bare `vortex`, change
-        #       this to NPM_READ_TOKEN, which every repo has.
         # =====================================================================
 
         # ------------------------------------------------- vtx:keep secrets ---
         secrets:
             tap-token: ${{ secrets.VTX_HOMEBREW_TAP_PAT }}
-            npm-token: ${{ secrets.NPM_TOKEN }}
+            npm-token: ${{ secrets.NPM_READ_TOKEN }}
             ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
         # ---------------------------------------------------------- vtx:end ---
 
