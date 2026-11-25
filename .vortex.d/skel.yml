@@ -39,6 +39,9 @@ files:
   .claude/skills/vortex-tkt-finish/SKILL.md:
     merge: verbatim
     policy: enforce
+  .claude/skills/vortex-tkt-shape/SKILL.md:
+    merge: verbatim
+    policy: enforce
   .claude/skills/vortex-tkt-status/SKILL.md:
     merge: verbatim
     policy: enforce
