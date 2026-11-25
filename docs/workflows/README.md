@@ -20,6 +20,8 @@ it carries out, if any. The workflow stubs are:
 | [promote-repo](promote-repo.md) | promoting a repo to production across the two GitHub orgs | [Repo promotion](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/sdlc/README.md#repo-promotion) |
 | [repo-release](repo-release.md) | releasing an artifact, and updating a Homebrew formula | [Internal package publish](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/sdlc/README.md#internal-package-publish) |
 | [job-renew-certs](job-renew-certs.md) | weekly: requesting renewal of TLS certificates | [Automated deployment](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/sdlc/README.md#automated-deployment), in production |
+| [job-build-images](job-build-images.md) | building the platform's machine images, in development | [Automated deployment](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/sdlc/README.md#automated-deployment), in development |
+| [job-apply-images](job-apply-images.md) | moving machines onto each new usable machine image | [Automated deployment](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/sdlc/README.md#automated-deployment), in production |
 | [container-deployment](container-deployment.md) | deploying container services, in development and production | [Automated deployment](https://github.com/TeamVortexSoftware/platform-repos/blob/main/docs/sdlc/README.md#automated-deployment), in production |
 
 Adding another is adding a stub to `workflow-stubs/`, the reusable workflow it

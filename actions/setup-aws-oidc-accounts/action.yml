@@ -8,6 +8,11 @@
 # file's layout can change without touching this action. An account the repo
 # does not list is never signed in to.
 #
+# A job whose role exists in only some of those accounts names them in
+# `include-aws-accounts`, and only those are signed in to. A name the repo's
+# vortex.yml does not list stops the job before any sign-in, with an error that
+# names the account and the repo whose vortex.yml to add it to.
+#
 # THE JOB NAMES ITS ROLES; every profile of an account carries the account's
 # role. Each role ARN is a repo variable, ACTIONS_AWS_<ROLE NAME>_ROLE__<ACCOUNT>
 # (upper case, hyphens as underscores), written from the GitHub provider file:
@@ -54,6 +59,10 @@ inputs:
   aws-region:
     description: AWS region every profile is created with.
     required: true
+  include-aws-accounts:
+    description: Space-separated names of the accounts to sign in to, each one listed in the repo's vortex.yml. Leave empty to sign in to every account listed there.
+    required: false
+    default: ""
   vars:
     description: |
       The calling repo's Actions variables as one flat JSON object of variable
@@ -86,6 +95,7 @@ runs:
         OIDC_ROLE: ${{ inputs.oidc-role }}
         INTERNAL_ROLE: ${{ inputs.internal-role }}
         AWS_REGION_INPUT: ${{ inputs.aws-region }}
+        INCLUDE_ACCOUNTS: ${{ inputs.include-aws-accounts }}
         REPO_VARS: ${{ inputs.vars }}
         ROLE_SESSION_NAME: ${{ inputs.role-session-name }}
         DURATION_SECONDS: ${{ inputs.duration-seconds }}
@@ -94,6 +104,21 @@ runs:
 
         accounts=$(vortex config general -p actions-aws-accounts --no-check | jq -c .)
         echo "AWS accounts: ${accounts}"
+
+        # Narrow to the accounts the job names, each of which must be listed.
+        if [ -n "${INCLUDE_ACCOUNTS// /}" ]; then
+          listed=$(jq -r 'keys | join(", ")' <<<"${accounts}")
+          for name in ${INCLUDE_ACCOUNTS}; do
+            if ! jq -e --arg a "${name}" 'has($a)' <<<"${accounts}" >/dev/null; then
+              echo "::error::include-aws-accounts names '${name}', which is not in vortex.yml's behavior.terraform.actions_aws_accounts in ${GITHUB_REPOSITORY} (${listed}). Add it there first." >&2
+              exit 1
+            fi
+          done
+          accounts=$(jq -c --arg names "${INCLUDE_ACCOUNTS}" \
+            '([$names | splits("\\s+")] | map(select(length > 0))) as $n
+             | with_entries(select(.key as $k | $n | index($k) != null))' <<<"${accounts}")
+          echo "Signing in to: ${accounts}"
+        fi
 
         # ACTIONS_AWS_<ROLE NAME>_ROLE__<ACCOUNT>: $1 the role name, $2 the account.
         upper() { tr '[:lower:]-' '[:upper:]_' <<<"$1"; }

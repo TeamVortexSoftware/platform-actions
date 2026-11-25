@@ -1,0 +1,89 @@
+# From the vortex 'job-build-images' workflow template. Install as vtx-job-build-images.yml.
+# See platform-actions/docs/workflows/job-build-images.md
+#
+# MANAGED BY `vortex repo gha update`. Everything outside a `vtx:keep` block
+# is refreshed from this template on every update — which is how a change here
+# reaches every repo that installed it. Inside a block the VALUES are yours.
+#
+# Which SETTINGS EXIST is not: an update reconciles the `with:` map against what
+# the called workflow declares, adding any it is missing at that workflow's own
+# default and removing any the workflow no longer declares. A setting the callee
+# does not declare is a workflow-file error, not a preference — GitHub refuses
+# the whole file over it. Your chosen values are never rewritten.
+#
+# To stop the file being managed at all, rename it to drop the `vtx-` prefix;
+# you keep a working workflow that is then entirely your own.
+
+# vtx:requires none
+#
+# This workflow builds machine images in an infra-data repo and runs nothing
+# from the repo's package.json. `none` is written out rather than left blank so
+# a reader can tell it was decided rather than forgotten.
+
+# ------------------------------------------------------------ vtx:keep name ---
+name: "[VTX] Job: Build Images"
+# ------------------------------------------------------------------ vtx:end ---
+
+# -------------------------------------------------------- vtx:keep triggers ---
+on:
+    schedule:
+        - cron: "23 9 * * *" # daily, 09:23 UTC
+    workflow_dispatch:
+# ------------------------------------------------------------------ vtx:end ---
+
+jobs:
+    job-build-images:
+        uses: TeamVortexSoftware/platform-actions/.github/workflows/job-build-images.yml@main
+
+        permissions:
+            contents: read
+            id-token: write # the AWS sign-in
+            actions: write # starting vtx-job-apply-images.yml
+
+        # =====================================================================
+        # SETTINGS — what each one does, and the value you get if you leave it
+        # out. This list is refreshed on every `vortex repo gha update`, so it
+        # always describes the workflow you are actually calling. Your chosen
+        # values live in the block below it and are never overwritten.
+        #
+        #   runs-on              REQUIRED
+        #       Label of the GitHub runner the job runs on. One of our own: the
+        #       temporary machines admit SSH only from our GitHub runners.
+        #
+        #   oidc-role            REQUIRED
+        #       The role, from the GitHub provider file's `oidc_roles`, the job
+        #       signs in with.
+        #
+        #   aws-accounts         REQUIRED
+        #       Space-separated accounts the job signs in to, each listed in
+        #       this repo's vortex.yml.
+        #
+        #   aws-region           REQUIRED
+        #       AWS region the job's AWS profiles are created with.
+        # =====================================================================
+
+        with:
+            # ---------------------------------------------- vtx:keep inputs ---
+            runs-on: vtx-amazon-linux-2023
+            oidc-role: images
+            aws-accounts: dev
+            aws-region: ${{ vars.VTX_PRIMARY_AWS_REGION }}
+            # ------------------------------------------------------ vtx:end ---
+
+        # =====================================================================
+        # SECRETS
+        #
+        #   npm-token            REQUIRED
+        #       npm token that can read the vortex CLI's package.
+        # =====================================================================
+
+        # ------------------------------------------------- vtx:keep secrets ---
+        secrets:
+            npm-token: ${{ secrets.NPM_TOKEN }}
+        # ---------------------------------------------------------- vtx:end ---
+
+####   Your own jobs and edits go INSIDE the block below.  ####
+####   Anything outside it is replaced on the next update.  ####
+
+# ----------------------------------------------------------- vtx:keep extra ---
+# ------------------------------------------------------------------ vtx:end ---
